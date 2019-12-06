@@ -1,0 +1,126 @@
+---
+title: "Simplex"
+author: "Dalia Camacho"
+date: "21 de septiembre de 2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+```
+
+Se define la función Simplex que recibe como entradas una matriz A, un vector b y un vector c que definen el problema de optimización:
+\[
+\max c^tx\\
+S.A\\
+Ax\leq b.
+\]
+Se tiene como resultado un vector que inidca las variables que dan la solución del problema y el valor de la función objetivo. El codigo imprime los arreglos intermedios
+```{r}
+
+Simplex <- function(A,b,c,.print=TRUE){
+  # Generar arreglo inicial
+  nrest <- nrow(A) # Número de variables
+  nvar  <- ncol(A) # Número de restricciones y de variables de holgura
+  
+  #Definir tamaño del arreglo
+  Arreglo <- matrix(0 ,ncol = (nvar+nrest+1), nrow = (nrest+1))
+  
+  # Agregar valores al arreglo inicial
+  Arreglo[1:nrest,1:nvar] <- A
+  Arreglo[nrest+1,1:nvar] <- -c
+  diag(Arreglo[1:nrest,(nvar+1):(nrest+nvar)]) <- 1
+  Arreglo[1:nrest,nrest+nvar+1] <- b
+  
+  # Definir nombres del arreglo inicial
+  colnames(Arreglo) <- c(unlist(lapply(1:nvar, function(i){paste0("x_",i)})),
+                         unlist(lapply(1:nrest, function(i){paste0("h_",i)})),"solución")
+  rownames(Arreglo) <- c(unlist(lapply(1:nrest, function(i){paste0("h_",i)})), "z")
+  
+  # Imprimir arreglo inicial
+  if(.print){
+    print("El arreglo inicial es:")
+    print(Arreglo)
+  }
+  
+  
+  # Contador de iteraciones
+  iter <- 0
+  while(any(Arreglo[nrest+1,]<0)){
+    iter <- iter+1
+    # Definir columna pivote (valor negativo mínimo en la columna z)
+    col.piv  <- which.min(Arreglo[nrest+1,])
+    
+    # Definir renglón pivote (variable de entrada)
+    # (El renglón donde se encuentre el mínimo (positivo) de dividir 
+    # la columna de soluciones entre la columna pivote)
+    aux <- Arreglo[(1:nrest), (nvar+nrest+1)]/Arreglo[1:nrest,col.piv]
+    
+    if(any(aux<0)){
+      aux[which(aux<0)] <- Inf
+    }
+    if(any(aux!=Inf)==FALSE){
+      stop("El problema pudo haberse definido incorrectamente.")
+    }
+    
+    reng.piv <- which.min(aux)
+    
+    # Cambiar variables dentro de la solución
+    rownames(Arreglo)[reng.piv] <- colnames(Arreglo)[col.piv] 
+    
+    #Dividir el renglón pivote entre el pivote operacional
+    Arreglo[reng.piv,] <- Arreglo[reng.piv,]/Arreglo[reng.piv,col.piv]
+    col.aux            <- Arreglo[,col.piv]
+    for(i in 1:(nrest+1)){
+      if(i!=reng.piv){
+        for(j in 1:(nvar+nrest+1)){
+          Arreglo[i,j] <- Arreglo[i,j]-col.aux[i]*Arreglo[reng.piv,j]
+        }
+      }
+    }
+    if(.print){
+      print(paste("El arreglo en la iteración", iter, "es:"))
+      print(Arreglo)
+    }
+  }
+  
+  return(list(Valor=Arreglo[nrest+1,nrest+nvar+1], Variables=Arreglo[1:nrest,nrest+nvar+1]))
+}
+
+```
+
+###Problema de la cervecería
+Se tienen dos tipos de cerveza **Lite** y **Light**, para producir 100 litros de cada una se requieren los ingredientes dados en la siguiente tabla. 
+
+```{r, echo=FALSE}
+tab <- matrix(c(2,4,2,21,3,1,9,31, 25,32,54,"-"), nrow = 3, byrow = TRUE)
+colnames(tab) <- c("Malta", "Lúpulo", "Levadura","Ganancias por 100 lts")
+rownames(tab) <- c("Lite", "Light", "Cantidad")
+print(tab)
+```
+El problema se puede escribir como:
+\[
+\max 21x_1+31x_2\\
+S.A.\\
+2x_1+3x_2\leq 25\\
+4x_1+x_2\leq 25\\
+2x_1+9x_2\leq 25
+\]
+
+```{r}
+# Definir problema en términos de A,b y c
+A <- matrix(c(2,3,4,1,2,9),ncol = 2, byrow = TRUE)
+b <- c(25, 32, 54)
+c <- c(21, 31)
+```
+
+```{r}
+# Correr el códig
+sol <- Simplex(A,b,c)
+```
+```{r}
+# Solución
+sol 
+```
+Las ganancias se maximizan cuando se producen 710 litros de Lite, 360 litros de Light, sobran 7.4 unidades de levadura y se obtienen  $\$$ 260.7 de ganancias.

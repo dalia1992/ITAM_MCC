@@ -1,0 +1,673 @@
+\documentclass[]{article}
+\usepackage{lmodern}
+\usepackage{amssymb,amsmath}
+\usepackage{ifxetex,ifluatex}
+\usepackage{fixltx2e} % provides \textsubscript
+\ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0 % if pdftex
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+\else % if luatex or xelatex
+  \ifxetex
+    \usepackage{mathspec}
+  \else
+    \usepackage{fontspec}
+  \fi
+  \defaultfontfeatures{Ligatures=TeX,Scale=MatchLowercase}
+\fi
+% use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+% use microtype if available
+\IfFileExists{microtype.sty}{%
+\usepackage{microtype}
+\UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\hypersetup{unicode=true,
+            pdftitle={Appendix: Algorithms},
+            pdfauthor={Dalia Camacho, Gabriela Vargas, Elizabeth Monroy},
+            pdfborder={0 0 0},
+            breaklinks=true}
+\urlstyle{same}  % don't use monospace font for urls
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{248,248,248}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.77,0.63,0.00}{#1}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\usepackage{graphicx,grffile}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+\IfFileExists{parskip.sty}{%
+\usepackage{parskip}
+}{% else
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt plus 2pt minus 1pt}
+}
+\setlength{\emergencystretch}{3em}  % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{0}
+% Redefines (sub)paragraphs to behave more like sections
+\ifx\paragraph\undefined\else
+\let\oldparagraph\paragraph
+\renewcommand{\paragraph}[1]{\oldparagraph{#1}\mbox{}}
+\fi
+\ifx\subparagraph\undefined\else
+\let\oldsubparagraph\subparagraph
+\renewcommand{\subparagraph}[1]{\oldsubparagraph{#1}\mbox{}}
+\fi
+
+%%% Use protect on footnotes to avoid problems with footnotes in titles
+\let\rmarkdownfootnote\footnote%
+\def\footnote{\protect\rmarkdownfootnote}
+
+%%% Change title format to be more compact
+\usepackage{titling}
+
+% Create subtitle command for use in maketitle
+\newcommand{\subtitle}[1]{
+  \posttitle{
+    \begin{center}\large#1\end{center}
+    }
+}
+
+\setlength{\droptitle}{-2em}
+
+  \title{Appendix: Algorithms}
+    \pretitle{\vspace{\droptitle}\centering\huge}
+  \posttitle{\par}
+    \author{Dalia Camacho, Gabriela Vargas, Elizabeth Monroy}
+    \preauthor{\centering\large\emph}
+  \postauthor{\par}
+    \date{}
+    \predate{}\postdate{}
+  
+
+\begin{document}
+\maketitle
+
+\section{Naive Pattern Matching}\label{naive-pattern-matching}
+
+Here we show the algorithm used for naive pattern search.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{naive_patternSearching<-}\ControlFlowTok{function}\NormalTok{(P,S,maxErr)\{}
+  \CommentTok{# Given the patterns P and S we transform them as}
+  \CommentTok{# a vector contianing its characters}
+\NormalTok{  P <-}\StringTok{ }\KeywordTok{substring}\NormalTok{(P,}\DecValTok{1}\OperatorTok{:}\KeywordTok{nchar}\NormalTok{(P),}\DecValTok{1}\OperatorTok{:}\KeywordTok{nchar}\NormalTok{(P))}
+\NormalTok{  S <-}\StringTok{ }\KeywordTok{substring}\NormalTok{(S,}\DecValTok{1}\OperatorTok{:}\KeywordTok{nchar}\NormalTok{(S),}\DecValTok{1}\OperatorTok{:}\KeywordTok{nchar}\NormalTok{(S))}
+  \CommentTok{# We find the length of the patterns}
+\NormalTok{  l <-}\StringTok{ }\KeywordTok{length}\NormalTok{(P)}
+\NormalTok{  N <-}\StringTok{ }\KeywordTok{length}\NormalTok{(S)}
+  \CommentTok{# We begin the pattern search}
+  \ControlFlowTok{for}\NormalTok{(i }\ControlFlowTok{in} \DecValTok{0}\OperatorTok{:}\NormalTok{(N}\OperatorTok{-}\NormalTok{l}\OperatorTok{+}\DecValTok{1}\NormalTok{))\{}
+\NormalTok{    Err <-}\StringTok{ }\DecValTok{0}
+\NormalTok{    j   <-}\StringTok{ }\DecValTok{1}
+\NormalTok{    k   <-}\StringTok{ }\DecValTok{1}
+    \ControlFlowTok{while}\NormalTok{(j}\OperatorTok{<=}\NormalTok{N }\OperatorTok{&}\StringTok{ }\NormalTok{k}\OperatorTok{<=}\NormalTok{l }\OperatorTok{&}\StringTok{ }\NormalTok{Err}\OperatorTok{<=}\NormalTok{maxErr)\{}
+      \ControlFlowTok{if}\NormalTok{(P[k]}\OperatorTok{==}\NormalTok{S[i}\OperatorTok{+}\NormalTok{j])\{}
+\NormalTok{        k<-k}\OperatorTok{+}\DecValTok{1}
+\NormalTok{        j<-j}\OperatorTok{+}\DecValTok{1}
+\NormalTok{      \}}\ControlFlowTok{else}\NormalTok{\{}
+        \ControlFlowTok{if}\NormalTok{((i}\OperatorTok{+}\NormalTok{j}\OperatorTok{+}\DecValTok{1}\NormalTok{) }\OperatorTok{<=}\StringTok{ }\NormalTok{N }\OperatorTok{&}\StringTok{ }\NormalTok{(k}\OperatorTok{+}\DecValTok{1}\NormalTok{) }\OperatorTok{<=}\StringTok{ }\NormalTok{l }\OperatorTok{&}\StringTok{ }\NormalTok{P[k]}\OperatorTok{==}\NormalTok{S[(i}\OperatorTok{+}\NormalTok{j}\OperatorTok{+}\DecValTok{1}\NormalTok{)])\{}
+          \ControlFlowTok{if}\NormalTok{(P[k}\OperatorTok{+}\DecValTok{1}\NormalTok{]}\OperatorTok{==}\NormalTok{S[i}\OperatorTok{+}\NormalTok{j])\{}
+            \CommentTok{#Transposition}
+\NormalTok{            Err <-}\StringTok{ }\NormalTok{Err}\OperatorTok{+}\DecValTok{1}
+\NormalTok{            j   <-}\StringTok{ }\NormalTok{j}\OperatorTok{+}\DecValTok{2}
+\NormalTok{            k   <-}\StringTok{ }\NormalTok{k}\OperatorTok{+}\DecValTok{2}
+\NormalTok{          \}}\ControlFlowTok{else}\NormalTok{\{}
+            \CommentTok{#Insertion}
+\NormalTok{            Err<-Err}\OperatorTok{+}\DecValTok{1}
+\NormalTok{            j <-}\StringTok{ }\NormalTok{j }\OperatorTok{+}\StringTok{ }\DecValTok{2}
+\NormalTok{          \}}
+\NormalTok{        \}}\ControlFlowTok{else}\NormalTok{\{}
+          \CommentTok{#Deletion}
+          \ControlFlowTok{if}\NormalTok{((k}\OperatorTok{+}\DecValTok{1}\NormalTok{)}\OperatorTok{<=}\NormalTok{l }\OperatorTok{&}\StringTok{ }\NormalTok{P[k}\OperatorTok{+}\DecValTok{1}\NormalTok{]}\OperatorTok{==}\NormalTok{S[i}\OperatorTok{+}\NormalTok{j])\{}
+\NormalTok{            Err<-Err}\OperatorTok{+}\DecValTok{1}
+\NormalTok{            k <-k}\OperatorTok{+}\DecValTok{2}
+\NormalTok{          \}}\ControlFlowTok{else}\NormalTok{\{}
+            \CommentTok{#Substitution}
+\NormalTok{            Err<-Err}\OperatorTok{+}\DecValTok{1}
+\NormalTok{            k <-}\StringTok{ }\NormalTok{k}\OperatorTok{+}\DecValTok{1}
+\NormalTok{            j <-}\StringTok{ }\NormalTok{j}\OperatorTok{+}\DecValTok{1}
+\NormalTok{          \}}
+\NormalTok{        \}}
+\NormalTok{      \}}
+\NormalTok{    \}}
+    \CommentTok{# Return first occurence of the pattern}
+    \ControlFlowTok{if}\NormalTok{(Err}\OperatorTok{<=}\NormalTok{maxErr)\{}
+      \KeywordTok{return}\NormalTok{(}\KeywordTok{list}\NormalTok{(}\DataTypeTok{position=}\NormalTok{i}\OperatorTok{+}\DecValTok{1}\NormalTok{, }\DataTypeTok{errors=}\NormalTok{Err))}
+\NormalTok{    \}}
+\NormalTok{  \}}
+  \ControlFlowTok{if}\NormalTok{(Err}\OperatorTok{>}\NormalTok{maxErr)\{}
+    \KeywordTok{return}\NormalTok{(}\StringTok{"Pattern not found"}\NormalTok{)}
+\NormalTok{  \}}
+\NormalTok{\}}
+\end{Highlighting}
+\end{Shaded}
+
+We tried the algorithm on the following examples:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{maxErr <-}\StringTok{ }\DecValTok{1}
+
+\NormalTok{S <-}\StringTok{ "Amlover"}
+\NormalTok{P <-}\StringTok{ "Amlo"}
+\KeywordTok{naive_patternSearching}\NormalTok{(P,S,maxErr)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## $position
+## [1] 1
+## 
+## $errors
+## [1] 0
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{P <-}\StringTok{ "Axlo"}
+\KeywordTok{naive_patternSearching}\NormalTok{(P,S,maxErr)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## $position
+## [1] 1
+## 
+## $errors
+## [1] 1
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{P <-}\StringTok{ "love"}
+\KeywordTok{naive_patternSearching}\NormalTok{(P,S,maxErr)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## $position
+## [1] 3
+## 
+## $errors
+## [1] 0
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{P <-}\StringTok{ "lobe"}
+\KeywordTok{naive_patternSearching}\NormalTok{(P,S,maxErr)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## $position
+## [1] 3
+## 
+## $errors
+## [1] 1
+\end{verbatim}
+
+\section{Algorithm to defined the shift
+tree}\label{algorithm-to-defined-the-shift-tree}
+
+This function generates a shift tree from a set of patterns.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{library}\NormalTok{(data.tree)}
+\KeywordTok{library}\NormalTok{(dplyr)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+## Attaching package: 'dplyr'
+\end{verbatim}
+
+\begin{verbatim}
+## The following objects are masked from 'package:stats':
+## 
+##     filter, lag
+\end{verbatim}
+
+\begin{verbatim}
+## The following objects are masked from 'package:base':
+## 
+##     intersect, setdiff, setequal, union
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{DefineShiftTree <-}\StringTok{ }\ControlFlowTok{function}\NormalTok{(patterns)\{}
+  
+  \CommentTok{#Maximum shift value}
+\NormalTok{  maxShift  <-}\StringTok{ }\KeywordTok{min}\NormalTok{(}\KeywordTok{nchar}\NormalTok{(patterns))}
+  
+  \CommentTok{# Create blocks of the suffixes with length 2}
+\NormalTok{  Bs        <-}\KeywordTok{unique}\NormalTok{(}\KeywordTok{unlist}\NormalTok{(}\KeywordTok{lapply}\NormalTok{(patterns, }
+                                   \ControlFlowTok{function}\NormalTok{(i)\{}
+                                     \KeywordTok{substr}\NormalTok{(i,(}\KeywordTok{nchar}\NormalTok{(i)}\OperatorTok{-}\DecValTok{1}\NormalTok{),}\KeywordTok{nchar}\NormalTok{(i))}
+\NormalTok{                                   \})))}
+  
+  \CommentTok{# Extract all characters in the patterns}
+\NormalTok{  Chars   <-}\StringTok{ }\KeywordTok{unique}\NormalTok{(}\KeywordTok{unlist}\NormalTok{(}\KeywordTok{lapply}\NormalTok{(patterns,}
+                                  \ControlFlowTok{function}\NormalTok{(i)\{}
+                                    \KeywordTok{substring}\NormalTok{(i,}\DecValTok{1}\OperatorTok{:}\KeywordTok{nchar}\NormalTok{(i), }\DecValTok{1}\OperatorTok{:}\KeywordTok{nchar}\NormalTok{(i))}
+\NormalTok{                                  \}}
+\NormalTok{  )))}
+  \CommentTok{# Create vector with all characters from the patterns that }
+  \CommentTok{# do not correspond to the first character of any of the blocks}
+\NormalTok{  CharsErr1 <-}\StringTok{ }\KeywordTok{c}\NormalTok{(Chars[}\OperatorTok{-}\KeywordTok{which}\NormalTok{(Chars}\OperatorTok{%in%}\KeywordTok{substring}\NormalTok{(Bs,}\DecValTok{1}\NormalTok{,}\DecValTok{1}\NormalTok{))], }\StringTok{"not"}\NormalTok{)}
+  
+  \CommentTok{# Create vector with all characters from the patterns that }
+  \CommentTok{# do not correspond to the second character of any of the blocks}
+\NormalTok{  CharsErr2 <-}\StringTok{ }\KeywordTok{c}\NormalTok{(Chars[}\OperatorTok{-}\KeywordTok{which}\NormalTok{(Chars}\OperatorTok{%in%}\KeywordTok{substring}\NormalTok{(Bs,}\DecValTok{2}\NormalTok{,}\DecValTok{2}\NormalTok{))], }\StringTok{"not"}\NormalTok{)}
+  
+  \CommentTok{# Define the maximum number of shifts for all the substrings of size two}
+  \CommentTok{# that do not correspond to any suffix}
+\NormalTok{  Shifts <-}\StringTok{ }\KeywordTok{matrix}\NormalTok{(}\KeywordTok{unlist}\NormalTok{(}\KeywordTok{lapply}\NormalTok{(patterns,}
+                                 \ControlFlowTok{function}\NormalTok{(i)\{}
+                                   \KeywordTok{rbind}\NormalTok{(}\KeywordTok{substring}\NormalTok{(i,}\DecValTok{1}\OperatorTok{:}\NormalTok{(}\KeywordTok{nchar}\NormalTok{(i)}\OperatorTok{-}\DecValTok{1}\NormalTok{), }\DecValTok{2}\OperatorTok{:}\NormalTok{(}\KeywordTok{nchar}\NormalTok{(i))),(}\KeywordTok{nchar}\NormalTok{(i)}\OperatorTok{-}\DecValTok{2}\NormalTok{)}\OperatorTok{:}\DecValTok{0}\NormalTok{)}
+\NormalTok{                                 \}}
+\NormalTok{  )), }\DataTypeTok{ncol=}\DecValTok{2}\NormalTok{, }\DataTypeTok{byrow=}\OtherTok{TRUE}\NormalTok{)}
+  
+\NormalTok{  Shifts[,}\DecValTok{2}\NormalTok{] <-}\StringTok{ }\KeywordTok{lapply}\NormalTok{(Shifts[,}\DecValTok{2}\NormalTok{], }\ControlFlowTok{function}\NormalTok{(i)\{}\KeywordTok{min}\NormalTok{(maxShift, }\KeywordTok{as.numeric}\NormalTok{(i))\}) }\OperatorTok{%>%}\StringTok{ }\KeywordTok{unlist}\NormalTok{()}
+  
+  \ControlFlowTok{if}\NormalTok{(}\KeywordTok{any}\NormalTok{ (}\KeywordTok{duplicated}\NormalTok{(Shifts[,}\DecValTok{1}\NormalTok{])))\{}
+\NormalTok{    doubles    <-}\StringTok{ }\KeywordTok{which}\NormalTok{(}\KeywordTok{duplicated}\NormalTok{(Shifts[,}\DecValTok{1}\NormalTok{]))}
+\NormalTok{    stringDob  <-}\StringTok{ }\NormalTok{Shifts[doubles,}\DecValTok{1}\NormalTok{]}
+\NormalTok{    uniqueDob  <-}\StringTok{ }\KeywordTok{unique}\NormalTok{(Shifts[doubles,}\DecValTok{1}\NormalTok{])}
+    \ControlFlowTok{for}\NormalTok{ (i  }\ControlFlowTok{in}\NormalTok{ uniqueDob) \{}
+\NormalTok{      whichstr <-}\StringTok{ }\KeywordTok{which}\NormalTok{(Shifts[,}\DecValTok{1}\NormalTok{]}\OperatorTok{==}\NormalTok{i)}
+\NormalTok{      Shifts[whichstr,}\DecValTok{2}\NormalTok{] <-}\StringTok{ }\KeywordTok{min}\NormalTok{(}\KeywordTok{as.numeric}\NormalTok{(Shifts[whichstr,}\DecValTok{2}\NormalTok{]))}
+\NormalTok{    \}}
+\NormalTok{    Shifts <-}\StringTok{ }\KeywordTok{unique}\NormalTok{(Shifts)}
+\NormalTok{  \}}
+\NormalTok{  Shifts     <-}\StringTok{ }\NormalTok{Shifts[}\OperatorTok{-}\KeywordTok{which}\NormalTok{(Shifts[,}\DecValTok{2}\NormalTok{]}\OperatorTok{==}\StringTok{"0"}\NormalTok{),]}
+\NormalTok{  Shifts     <-}\StringTok{ }\KeywordTok{cbind}\NormalTok{(Shifts, }\KeywordTok{substring}\NormalTok{(Shifts[,}\DecValTok{1}\NormalTok{],}\DecValTok{1}\NormalTok{,}\DecValTok{1}\NormalTok{))}
+\NormalTok{  Shifts     <-}\StringTok{ }\KeywordTok{cbind}\NormalTok{(Shifts, }\KeywordTok{substring}\NormalTok{(Shifts[,}\DecValTok{1}\NormalTok{],}\DecValTok{2}\NormalTok{,}\DecValTok{2}\NormalTok{))}
+  
+  
+  
+  
+  
+\NormalTok{  Tree <-}\StringTok{ }\NormalTok{Node}\OperatorTok{$}\KeywordTok{new}\NormalTok{(}\StringTok{"Root"}\NormalTok{)}
+  \ControlFlowTok{for}\NormalTok{ (i  }\ControlFlowTok{in} \DecValTok{1}\OperatorTok{:}\KeywordTok{length}\NormalTok{(Bs)) \{}
+\NormalTok{    Tree}\OperatorTok{$}\KeywordTok{AddChild}\NormalTok{(}\KeywordTok{substring}\NormalTok{(Bs[i],}\DecValTok{1}\NormalTok{,}\DecValTok{1}\NormalTok{))}\OperatorTok{$}\KeywordTok{AddChild}\NormalTok{(}\KeywordTok{substring}\NormalTok{(Bs[i],}\DecValTok{2}\NormalTok{,}\DecValTok{2}\NormalTok{))}\OperatorTok{$}\KeywordTok{AddSibling}\NormalTok{(}\StringTok{"Error"}\NormalTok{)}
+\NormalTok{    Tree}\OperatorTok{$}\NormalTok{children[[i]]}\OperatorTok{$}\NormalTok{children[[}\DecValTok{1}\NormalTok{]]}\OperatorTok{$}\NormalTok{shift <-}\StringTok{ }\DecValTok{0}
+\NormalTok{    Tree}\OperatorTok{$}\NormalTok{children[[i]]}\OperatorTok{$}\NormalTok{children[[}\DecValTok{1}\NormalTok{]]}\OperatorTok{$}\NormalTok{error <-}\StringTok{ }\DecValTok{0}
+\NormalTok{    Tree}\OperatorTok{$}\NormalTok{children[[i]]}\OperatorTok{$}\NormalTok{children[[}\DecValTok{1}\NormalTok{]]}\OperatorTok{$}\NormalTok{pointer <-}\StringTok{ }\NormalTok{i}
+    
+\NormalTok{    Tree}\OperatorTok{$}\NormalTok{children[[i]]}\OperatorTok{$}\NormalTok{children[[}\DecValTok{2}\NormalTok{]]}\OperatorTok{$}\NormalTok{shift   <-}\StringTok{ }\DecValTok{0}
+\NormalTok{    Tree}\OperatorTok{$}\NormalTok{children[[i]]}\OperatorTok{$}\NormalTok{children[[}\DecValTok{2}\NormalTok{]]}\OperatorTok{$}\NormalTok{error   <-}\StringTok{ }\DecValTok{1}
+\NormalTok{    Tree}\OperatorTok{$}\NormalTok{children[[i]]}\OperatorTok{$}\NormalTok{children[[}\DecValTok{2}\NormalTok{]]}\OperatorTok{$}\NormalTok{pointer <-}\StringTok{ }\NormalTok{i}
+    
+    
+\NormalTok{  \}}
+  \CommentTok{# Add all the branches that arise from a first error}
+\NormalTok{  Tree}\OperatorTok{$}\KeywordTok{AddChild}\NormalTok{(}\StringTok{"Error"}\NormalTok{)}
+  
+  \ControlFlowTok{for}\NormalTok{ (i }\ControlFlowTok{in} \DecValTok{1}\OperatorTok{:}\KeywordTok{length}\NormalTok{(CharsErr1)) \{}
+    \CommentTok{# Add character from pattern}
+\NormalTok{    Tree}\OperatorTok{$}\NormalTok{Error}\OperatorTok{$}\KeywordTok{AddChild}\NormalTok{(CharsErr1[i])}
+    
+    \ControlFlowTok{for}\NormalTok{ (j }\ControlFlowTok{in} \DecValTok{1}\OperatorTok{:}\KeywordTok{length}\NormalTok{(}\KeywordTok{unique}\NormalTok{(}\KeywordTok{substring}\NormalTok{(Bs,}\DecValTok{2}\NormalTok{,}\DecValTok{2}\NormalTok{)))) \{}
+\NormalTok{      Tree}\OperatorTok{$}\NormalTok{Error}\OperatorTok{$}\NormalTok{children[[i]]}\OperatorTok{$}\KeywordTok{AddChild}\NormalTok{(}\KeywordTok{unique}\NormalTok{(}\KeywordTok{substring}\NormalTok{(Bs,}\DecValTok{2}\NormalTok{,}\DecValTok{2}\NormalTok{))[j])}
+\NormalTok{      Tree}\OperatorTok{$}\NormalTok{Error}\OperatorTok{$}\NormalTok{children[[i]]}\OperatorTok{$}\NormalTok{children[[j]]}\OperatorTok{$}\NormalTok{shift   <-}\DecValTok{0}
+\NormalTok{      Tree}\OperatorTok{$}\NormalTok{Error}\OperatorTok{$}\NormalTok{children[[i]]}\OperatorTok{$}\NormalTok{children[[j]]}\OperatorTok{$}\NormalTok{error   <-}\DecValTok{0}
+\NormalTok{      Tree}\OperatorTok{$}\NormalTok{Error}\OperatorTok{$}\NormalTok{children[[i]]}\OperatorTok{$}\NormalTok{children[[j]]}\OperatorTok{$}\NormalTok{pointer <-}\StringTok{ }\NormalTok{j}
+      
+\NormalTok{    \}}
+    
+    \CommentTok{# Add node for the second error}
+\NormalTok{    Tree}\OperatorTok{$}\NormalTok{Error}\OperatorTok{$}\NormalTok{children[[i]]}\OperatorTok{$}\KeywordTok{AddChild}\NormalTok{(}\StringTok{"Error"}\NormalTok{)}
+    
+    \CommentTok{# Add all the nodes that arise from a second error}
+    \ControlFlowTok{for}\NormalTok{ (j }\ControlFlowTok{in} \DecValTok{1}\OperatorTok{:}\KeywordTok{length}\NormalTok{(CharsErr2)) \{}
+\NormalTok{      Tree}\OperatorTok{$}\NormalTok{Error}\OperatorTok{$}\NormalTok{children[[i]]}\OperatorTok{$}\NormalTok{Error}\OperatorTok{$}\KeywordTok{AddChild}\NormalTok{(CharsErr2[j])}
+\NormalTok{      Tree}\OperatorTok{$}\NormalTok{Error}\OperatorTok{$}\NormalTok{children[[i]]}\OperatorTok{$}\NormalTok{Error}\OperatorTok{$}\NormalTok{children[[j]]}\OperatorTok{$}\NormalTok{error <-}\StringTok{ }\DecValTok{2}
+\NormalTok{      Tree}\OperatorTok{$}\NormalTok{Error}\OperatorTok{$}\NormalTok{children[[i]]}\OperatorTok{$}\NormalTok{Error}\OperatorTok{$}\NormalTok{children[[j]]}\OperatorTok{$}\NormalTok{shift <-}\StringTok{ }\NormalTok{maxShift}
+\NormalTok{    \}}
+    \CommentTok{# If the character corresponds to the first character of}
+    \CommentTok{# any substring of size two (without sufffixes)}
+    \CommentTok{# find the entry of the tree that matches the substrings}
+    \CommentTok{# starting with this character and adjust shift value}
+    \ControlFlowTok{if}\NormalTok{(CharsErr1[i]}\OperatorTok{%in%}\NormalTok{Shifts[,}\DecValTok{3}\NormalTok{])\{}
+\NormalTok{      mark <-}\StringTok{ }\KeywordTok{which}\NormalTok{(Shifts[,}\DecValTok{3}\NormalTok{]}\OperatorTok{==}\NormalTok{CharsErr1[i])}
+      \ControlFlowTok{for}\NormalTok{ (j }\ControlFlowTok{in}\NormalTok{ mark) \{}
+        \ControlFlowTok{if}\NormalTok{(}\KeywordTok{is.null}\NormalTok{( Tree}\OperatorTok{$}\NormalTok{Error}\OperatorTok{$}\NormalTok{children[[i]]}\OperatorTok{$}\NormalTok{Error}\OperatorTok{$}\NormalTok{children[[Shifts[j,}\DecValTok{4}\NormalTok{]]])}\OperatorTok{==}\OtherTok{FALSE}\NormalTok{)\{}
+\NormalTok{          Tree}\OperatorTok{$}\NormalTok{Error}\OperatorTok{$}\NormalTok{children[[i]]}\OperatorTok{$}\NormalTok{Error}\OperatorTok{$}\NormalTok{children[[Shifts[j,}\DecValTok{4}\NormalTok{]]]}\OperatorTok{$}\NormalTok{shift <-}\StringTok{ }\NormalTok{Shifts[j,}\DecValTok{2}\NormalTok{]}
+\NormalTok{        \}}
+\NormalTok{      \}}
+\NormalTok{    \}}
+\NormalTok{  \}}
+  \KeywordTok{return}\NormalTok{(Tree)}
+\NormalTok{\}}
+\end{Highlighting}
+\end{Shaded}
+
+As an exmaple consider the tree constructed from the following patterns.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{Tree <-}\StringTok{ }\KeywordTok{DefineShiftTree}\NormalTok{(}\KeywordTok{c}\NormalTok{(}\StringTok{"Amlo"}\NormalTok{, }\StringTok{"Amlover"}\NormalTok{,}\StringTok{"Amlofest"}\NormalTok{))}
+\NormalTok{Tree}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##                                levelName
+## 1   Root                                
+## 2    ¦--l                               
+## 3    ¦   ¦--o                           
+## 4    ¦   °--Error                       
+## 5    ¦--e                               
+## 6    ¦   ¦--r                           
+## 7    ¦   °--Error                       
+## 8    ¦--s                               
+## 9    ¦   ¦--t                           
+## 10   ¦   °--Error                       
+## 11   °--Error                           
+## 12       ¦--A                           
+## 13       ¦   ¦--o                       
+## 14       ¦   ¦--r                       
+## 15       ¦   ¦--t                       
+## 16       ¦   °--Error                   
+## 17       ¦       ¦--A                   
+## 18       ¦       ¦--m                   
+## 19       ¦       ¦--l                   
+## 20       ¦       ¦--v                   
+## 21       ¦       ¦--e                   
+## 22       ¦       ¦--f                   
+## 23       ¦       ¦--s                   
+## 24       ¦       °--not                 
+## 25       ¦--m                           
+## 26       ¦   ¦--o                       
+## 27       ¦   ¦--r                       
+## 28       ¦   ¦--t                       
+## 29       ¦   °--Error                   
+## 30       ¦       ¦--A                   
+## 31       ¦       ¦--m                   
+## 32       ¦       ¦--l                   
+## 33       ¦       ¦--v                   
+## 34       ¦       ¦--e                   
+## 35       ¦       ¦--f                   
+## 36       ¦       ¦--s                   
+## 37       ¦       °--not                 
+## 38       ¦--o                           
+## 39       ¦   ¦--o                       
+## 40       ¦   ¦--r                       
+## 41       ¦   ¦--t                       
+## 42       ¦   °--Error                   
+## 43       ¦       ¦--A                   
+## 44       ¦       ¦--m                   
+## 45       ¦       ¦--l                   
+## 46       ¦       ¦--v                   
+## 47       ¦       ¦--e                   
+## 48       ¦       ¦--f                   
+## 49       ¦       ¦--s                   
+## 50       ¦       °--not                 
+## 51       ¦--v                           
+## 52       ¦   ¦--o                       
+## 53       ¦   ¦--r                       
+## 54       ¦   ¦--t                       
+## 55       ¦   °--Error                   
+## 56       ¦       ¦--A                   
+## 57       ¦       ¦--m                   
+## 58       ¦       ¦--l                   
+## 59       ¦       ¦--v                   
+## 60       ¦       ¦--e                   
+## 61       ¦       ¦--f                   
+## 62       ¦       ¦--s                   
+## 63       ¦       °--not                 
+## 64       ¦--r                           
+## 65       ¦   ¦--o                       
+## 66       ¦   ¦--r                       
+## 67       ¦   ¦--t                       
+## 68       ¦   °--Error                   
+## 69       ¦       ¦--A                   
+## 70       ¦       ¦--m                   
+## 71       ¦       ¦--l                   
+## 72       ¦       ¦--v                   
+## 73       ¦       ¦--e                   
+## 74       ¦       ¦--f                   
+## 75       ¦       ¦--s                   
+## 76       ¦       °--not                 
+## 77       ¦--f                           
+## 78       ¦   ¦--o                       
+## 79       ¦   ¦--r                       
+## 80       ¦   ¦--t                       
+## 81       ¦   °--Error                   
+## 82       ¦       ¦--A                   
+## 83       ¦       ¦--m                   
+## 84       ¦       ¦--l                   
+## 85       ¦       ¦--v                   
+## 86       ¦       ¦--e                   
+## 87       ¦       ¦--f                   
+## 88       ¦       ¦--s                   
+## 89       ¦       °--not                 
+## 90       ¦--t                           
+## 91       ¦   ¦--o                       
+## 92       ¦   ¦--r                       
+## 93       ¦   ¦--t                       
+## 94       ¦   °--Error                   
+## 95       ¦       ¦--A                   
+## 96       ¦       ¦--m                   
+## 97       ¦       ¦--l                   
+## 98       ¦       ¦--v                   
+## 99       ¦       ¦--e                   
+## 100      ¦       °--... 3 nodes w/ 0 sub
+## 101      °--... 1 nodes w/ 15 sub
+\end{verbatim}
+
+\section{Search Algorithm}\label{search-algorithm}
+
+First we define the algorithm that will be used to search on a string
+once the suffix matched to at most one error and the corresponding
+pattern has been selected from the set.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# This algorithm receives as input a pattern and a string already divided by characters}
+\CommentTok{# The current error and the maximum error}
+\CommentTok{# As ourput it returns the position in which the pattern was found}
+\CommentTok{# and the number of errors. If the pattern did not match it returns a -1}
+\CommentTok{# This search starts from the last characters of both the string and the pattern}
+\NormalTok{searchInverted<-}\StringTok{ }\ControlFlowTok{function}\NormalTok{(P,S, Err, maxErr)\{}
+\NormalTok{  j   <-}\StringTok{ }\KeywordTok{length}\NormalTok{(S)}
+\NormalTok{  k   <-}\StringTok{ }\KeywordTok{length}\NormalTok{(P)}
+  \ControlFlowTok{while}\NormalTok{(j}\OperatorTok{>}\DecValTok{0} \OperatorTok{&}\StringTok{ }\NormalTok{k}\OperatorTok{>}\DecValTok{0} \OperatorTok{&}\StringTok{ }\NormalTok{Err}\OperatorTok{<=}\NormalTok{maxErr)\{}
+    \ControlFlowTok{if}\NormalTok{(P[k]}\OperatorTok{==}\NormalTok{S[j])\{}
+\NormalTok{      k<-k}\OperatorTok{-}\DecValTok{1}
+\NormalTok{      j<-j}\OperatorTok{-}\DecValTok{1}
+\NormalTok{    \}}\ControlFlowTok{else}\NormalTok{\{}
+      \ControlFlowTok{if}\NormalTok{((k}\OperatorTok{-}\DecValTok{1}\NormalTok{)}\OperatorTok{>}\DecValTok{0} \OperatorTok{&}\StringTok{ }\NormalTok{(j}\OperatorTok{-}\DecValTok{1}\NormalTok{)}\OperatorTok{>}\DecValTok{0}\NormalTok{)\{}
+        \ControlFlowTok{if}\NormalTok{(P[k}\OperatorTok{-}\DecValTok{1}\NormalTok{]}\OperatorTok{==}\NormalTok{S[j])\{}
+          \ControlFlowTok{if}\NormalTok{(P[k]}\OperatorTok{==}\NormalTok{S[j}\OperatorTok{-}\DecValTok{1}\NormalTok{])\{}
+            \CommentTok{#Transposition}
+\NormalTok{            Err <-}\StringTok{ }\NormalTok{Err}\OperatorTok{+}\DecValTok{1}
+\NormalTok{            j   <-}\StringTok{ }\NormalTok{j}\OperatorTok{-}\DecValTok{2}
+\NormalTok{            k   <-}\StringTok{ }\NormalTok{k}\OperatorTok{-}\DecValTok{2}
+\NormalTok{          \}}\ControlFlowTok{else}\NormalTok{\{}
+            \CommentTok{#Insertion}
+\NormalTok{            Err<-Err}\OperatorTok{+}\DecValTok{1}
+\NormalTok{            j <-}\StringTok{ }\NormalTok{j }\OperatorTok{-}\StringTok{ }\DecValTok{2}
+\NormalTok{          \}}
+\NormalTok{        \}}
+\NormalTok{      \}}\ControlFlowTok{else}\NormalTok{\{}
+        \CommentTok{#Deletion}
+        \ControlFlowTok{if}\NormalTok{((j}\OperatorTok{-}\DecValTok{1}\NormalTok{)}\OperatorTok{>}\DecValTok{0}\NormalTok{)\{}
+          \ControlFlowTok{if}\NormalTok{(P[k]}\OperatorTok{==}\NormalTok{S[j}\OperatorTok{-}\DecValTok{1}\NormalTok{])\{}
+\NormalTok{            Err<-Err}\OperatorTok{+}\DecValTok{1}
+\NormalTok{            k <-k}\OperatorTok{-}\DecValTok{2}
+\NormalTok{          \}}
+\NormalTok{        \}}\ControlFlowTok{else}\NormalTok{\{}
+          \CommentTok{#Substitution}
+\NormalTok{          Err<-Err}\OperatorTok{+}\DecValTok{1}
+\NormalTok{          k <-}\StringTok{ }\NormalTok{k}\OperatorTok{-}\DecValTok{1}
+\NormalTok{          j <-}\StringTok{ }\NormalTok{j}\OperatorTok{-}\DecValTok{1}
+\NormalTok{        \}}
+\NormalTok{      \}}
+\NormalTok{    \}}
+\NormalTok{  \}}
+  \CommentTok{# Return first occurence of the pattern}
+  \ControlFlowTok{if}\NormalTok{(Err}\OperatorTok{<=}\NormalTok{maxErr)\{}
+    \KeywordTok{return}\NormalTok{(}\KeywordTok{list}\NormalTok{(}\DataTypeTok{position=}\NormalTok{j, }\DataTypeTok{errors=}\NormalTok{Err))}
+\NormalTok{  \}}\ControlFlowTok{else}\NormalTok{\{}
+    \KeywordTok{return}\NormalTok{(}\OperatorTok{-}\DecValTok{1}\NormalTok{)}
+\NormalTok{  \}}
+\NormalTok{\}}
+\end{Highlighting}
+\end{Shaded}
+
+Now we construct the function that finds the matches of severan strings.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{approx_multi_patternSearch <-}\StringTok{ }\ControlFlowTok{function}\NormalTok{(P,S, }\DataTypeTok{maxErr=}\DecValTok{1}\NormalTok{)\{}
+\NormalTok{  maxShift <-}\StringTok{ }\KeywordTok{min}\NormalTok{(}\KeywordTok{nchar}\NormalTok{(P))}
+\NormalTok{  Tree     <-}\StringTok{ }\KeywordTok{DefineShiftTree}\NormalTok{(P)}
+\NormalTok{  P        <-}\StringTok{ }\KeywordTok{lapply}\NormalTok{(P, }\ControlFlowTok{function}\NormalTok{(i)\{}\KeywordTok{substring}\NormalTok{(i,}\DecValTok{1}\OperatorTok{:}\KeywordTok{nchar}\NormalTok{(i),}\DecValTok{1}\OperatorTok{:}\KeywordTok{nchar}\NormalTok{(i))\}) }
+\NormalTok{  S        <-}\StringTok{ }\KeywordTok{lapply}\NormalTok{(S, }\ControlFlowTok{function}\NormalTok{(i)\{}\KeywordTok{substring}\NormalTok{(i,}\DecValTok{1}\OperatorTok{:}\KeywordTok{nchar}\NormalTok{(i),}\DecValTok{1}\OperatorTok{:}\KeywordTok{nchar}\NormalTok{(i))\}) }
+\NormalTok{  NStrings <-}\StringTok{ }\KeywordTok{length}\NormalTok{(S)}
+  \ControlFlowTok{for}\NormalTok{ (ni }\ControlFlowTok{in} \DecValTok{1}\OperatorTok{:}\NormalTok{NStrings) \{}
+\NormalTok{    Si     <-}\StringTok{ }\NormalTok{S[[ni]]}
+\NormalTok{    N      <-}\StringTok{ }\KeywordTok{length}\NormalTok{(Si)}
+\NormalTok{    Matchi <-}\StringTok{ }\OtherTok{NULL}
+\NormalTok{    i      <-}\StringTok{  }\NormalTok{maxShift }\OperatorTok{-}\StringTok{ }\DecValTok{1}
+    \ControlFlowTok{while}\NormalTok{ (i}\OperatorTok{<}\NormalTok{N)\{}
+\NormalTok{      pointer <-}\StringTok{ }\OtherTok{NULL}
+      \CommentTok{# Check if first character matches}
+      \ControlFlowTok{if}\NormalTok{(}\KeywordTok{is.null}\NormalTok{(Tree}\OperatorTok{$}\NormalTok{children[[Si[i]]]))\{}
+        \CommentTok{# Check if first character is in any of the patterns}
+        \ControlFlowTok{if}\NormalTok{(}\KeywordTok{is.null}\NormalTok{(Tree}\OperatorTok{$}\NormalTok{Error}\OperatorTok{$}\NormalTok{children[[Si[i]]]))\{}
+          \CommentTok{# Check if second character is in the pattern}
+          \ControlFlowTok{if}\NormalTok{(}\KeywordTok{is.null}\NormalTok{(Tree}\OperatorTok{$}\NormalTok{Error}\OperatorTok{$}\NormalTok{not}\OperatorTok{$}\NormalTok{children[[Si[i}\OperatorTok{+}\DecValTok{1}\NormalTok{]]]))\{}
+            \CommentTok{# Check if second character is in any of the patterns}
+            \ControlFlowTok{if}\NormalTok{(}\KeywordTok{is.null}\NormalTok{(Tree}\OperatorTok{$}\NormalTok{Error}\OperatorTok{$}\NormalTok{not}\OperatorTok{$}\NormalTok{Error}\OperatorTok{$}\NormalTok{children[[Si[i}\OperatorTok{+}\DecValTok{1}\NormalTok{]]]))\{}
+\NormalTok{              i <-}\StringTok{ }\NormalTok{i }\OperatorTok{+}\StringTok{ }\NormalTok{maxShift}
+\NormalTok{            \}}\ControlFlowTok{else}\NormalTok{\{}
+              \CommentTok{# second character is in a pattern}
+\NormalTok{              i <-}\StringTok{ }\NormalTok{i }\OperatorTok{+}\StringTok{ }\KeywordTok{as.numeric}\NormalTok{(Tree}\OperatorTok{$}\NormalTok{Error}\OperatorTok{$}\NormalTok{not}\OperatorTok{$}\NormalTok{Error}\OperatorTok{$}\NormalTok{children[[Si[i}\OperatorTok{+}\DecValTok{1}\NormalTok{]]]}\OperatorTok{$}\NormalTok{shift)}
+\NormalTok{            \}}
+\NormalTok{          \}}\ControlFlowTok{else}\NormalTok{\{}
+            \CommentTok{# Second character is last character}
+\NormalTok{            pointer <-}\StringTok{ }\KeywordTok{as.numeric}\NormalTok{(Tree}\OperatorTok{$}\NormalTok{Error}\OperatorTok{$}\NormalTok{not}\OperatorTok{$}\NormalTok{children[[Si[i}\OperatorTok{+}\DecValTok{1}\NormalTok{]]]}\OperatorTok{$}\NormalTok{pointer)}
+\NormalTok{            error   <-}\StringTok{ }\KeywordTok{as.numeric}\NormalTok{(Tree}\OperatorTok{$}\NormalTok{Error}\OperatorTok{$}\NormalTok{not}\OperatorTok{$}\NormalTok{children[[Si[i}\OperatorTok{+}\DecValTok{1}\NormalTok{]]]}\OperatorTok{$}\NormalTok{error)}
+\NormalTok{          \}}
+          \CommentTok{# Check if second character is last character}
+\NormalTok{        \}}\ControlFlowTok{else} \ControlFlowTok{if}\NormalTok{(}\KeywordTok{is.null}\NormalTok{(Tree}\OperatorTok{$}\NormalTok{Error}\OperatorTok{$}\NormalTok{children[[Si[i]]]}\OperatorTok{$}\NormalTok{children[[Si[i}\OperatorTok{+}\DecValTok{1}\NormalTok{]]]))\{}
+          \ControlFlowTok{if}\NormalTok{(}\KeywordTok{is.null}\NormalTok{(Tree}\OperatorTok{$}\NormalTok{Error}\OperatorTok{$}\NormalTok{children[[Si[i]]]}\OperatorTok{$}\NormalTok{Error}\OperatorTok{$}\NormalTok{children[[Si[i}\OperatorTok{+}\DecValTok{1}\NormalTok{]]]))\{}
+\NormalTok{            i <-}\StringTok{ }\NormalTok{i }\OperatorTok{+}\StringTok{ }\KeywordTok{as.numeric}\NormalTok{(Tree}\OperatorTok{$}\NormalTok{Error}\OperatorTok{$}\NormalTok{children[[Si[i]]]}\OperatorTok{$}\NormalTok{Error}\OperatorTok{$}\NormalTok{not}\OperatorTok{$}\NormalTok{shift)}
+\NormalTok{          \}}\ControlFlowTok{else}\NormalTok{\{}
+\NormalTok{            i <-}\StringTok{ }\NormalTok{i }\OperatorTok{+}\StringTok{ }\KeywordTok{as.numeric}\NormalTok{(Tree}\OperatorTok{$}\NormalTok{Error}\OperatorTok{$}\NormalTok{children[[Si[i]]]}\OperatorTok{$}\NormalTok{Error}\OperatorTok{$}\NormalTok{children[[Si[i}\OperatorTok{+}\DecValTok{1}\NormalTok{]]]}\OperatorTok{$}\NormalTok{shift)}
+\NormalTok{          \}}
+\NormalTok{        \}}\ControlFlowTok{else}\NormalTok{\{}
+          \CommentTok{#Second character is last}
+\NormalTok{          pointer <-}\StringTok{ }\KeywordTok{as.numeric}\NormalTok{(Tree}\OperatorTok{$}\NormalTok{Error}\OperatorTok{$}\NormalTok{children[[Si[i]]]}\OperatorTok{$}\NormalTok{children[[Si[i}\OperatorTok{+}\DecValTok{1}\NormalTok{]]]}\OperatorTok{$}\NormalTok{pointer)}
+\NormalTok{          error   <-}\StringTok{ }\KeywordTok{as.numeric}\NormalTok{(Tree}\OperatorTok{$}\NormalTok{Error}\OperatorTok{$}\NormalTok{children[[Si[i]]]}\OperatorTok{$}\NormalTok{children[[Si[i}\OperatorTok{+}\DecValTok{1}\NormalTok{]]]}\OperatorTok{$}\NormalTok{error)}
+          
+\NormalTok{        \}}
+\NormalTok{      \}}\ControlFlowTok{else}\NormalTok{\{}\CommentTok{# First Character matches check error in second character}
+        \ControlFlowTok{if}\NormalTok{(}\KeywordTok{is.null}\NormalTok{(Tree}\OperatorTok{$}\NormalTok{children[[Si[i]]]}\OperatorTok{$}\NormalTok{children[[Si[i}\OperatorTok{+}\DecValTok{1}\NormalTok{]]]))\{}
+          \CommentTok{# Check if second character in any pattern}
+          
+\NormalTok{          pointer <-}\StringTok{ }\KeywordTok{as.numeric}\NormalTok{(Tree}\OperatorTok{$}\NormalTok{children[[Si[i]]]}\OperatorTok{$}\NormalTok{Error}\OperatorTok{$}\NormalTok{pointer)}
+\NormalTok{          error   <-}\StringTok{ }\KeywordTok{as.numeric}\NormalTok{(Tree}\OperatorTok{$}\NormalTok{children[[Si[i]]]}\OperatorTok{$}\NormalTok{Error}\OperatorTok{$}\NormalTok{error)}
+          
+\NormalTok{        \}}\ControlFlowTok{else}\NormalTok{\{}
+\NormalTok{          pointer <-}\StringTok{ }\KeywordTok{as.numeric}\NormalTok{(Tree}\OperatorTok{$}\NormalTok{children[[Si[i]]]}\OperatorTok{$}\NormalTok{children[[Si[i}\OperatorTok{+}\DecValTok{1}\NormalTok{]]]}\OperatorTok{$}\NormalTok{pointer)}
+\NormalTok{          error   <-}\StringTok{ }\KeywordTok{as.numeric}\NormalTok{(Tree}\OperatorTok{$}\NormalTok{children[[Si[i]]]}\OperatorTok{$}\NormalTok{children[[Si[i}\OperatorTok{+}\DecValTok{1}\NormalTok{]]]}\OperatorTok{$}\NormalTok{error)}
+\NormalTok{        \}}
+\NormalTok{      \}}
+      \ControlFlowTok{if}\NormalTok{(}\KeywordTok{is.null}\NormalTok{(pointer)}\OperatorTok{==}\OtherTok{FALSE}\NormalTok{)\{}
+\NormalTok{        Pi  <-}\StringTok{ }\NormalTok{P[[pointer]][}\DecValTok{1}\OperatorTok{:}\NormalTok{(}\KeywordTok{length}\NormalTok{(P[[pointer]])}\OperatorTok{-}\DecValTok{2}\NormalTok{)]}
+\NormalTok{        Si  <-}\StringTok{ }\NormalTok{Si[}\DecValTok{1}\OperatorTok{:}\NormalTok{(i}\OperatorTok{-}\DecValTok{1}\NormalTok{)]}
+\NormalTok{        sol <-}\StringTok{ }\KeywordTok{searchInverted}\NormalTok{(Pi,Si,error, maxErr)}
+        \ControlFlowTok{if}\NormalTok{(sol[}\DecValTok{1}\NormalTok{] }\OperatorTok{!=}\StringTok{ }\OperatorTok{-}\DecValTok{1}\NormalTok{)\{}
+\NormalTok{          Matchi <-}\StringTok{ }\KeywordTok{c}\NormalTok{(}\DataTypeTok{string=}\NormalTok{ni, }\DataTypeTok{pattern=}\NormalTok{pointer,}\DataTypeTok{position=}\NormalTok{sol}\OperatorTok{$}\NormalTok{position, }\DataTypeTok{errors=}\NormalTok{sol}\OperatorTok{$}\NormalTok{errors)}
+\NormalTok{          i <-}\StringTok{ }\NormalTok{i}\OperatorTok{+}\NormalTok{N}
+\NormalTok{        \}}\ControlFlowTok{else}\NormalTok{\{}
+\NormalTok{          i <-}\StringTok{ }\NormalTok{i}\OperatorTok{+}\DecValTok{1}
+\NormalTok{        \}}
+\NormalTok{      \}}
+\NormalTok{    \}}
+    \ControlFlowTok{if}\NormalTok{(}\KeywordTok{is.null}\NormalTok{(Matchi) }\OperatorTok{||}\StringTok{ }\KeywordTok{is.null}\NormalTok{(pointer))\{}
+\NormalTok{      Matchi <-}\KeywordTok{c}\NormalTok{(}\DataTypeTok{string=}\NormalTok{ni, }\DataTypeTok{pattern =} \OperatorTok{-}\DecValTok{1}\NormalTok{, }\DataTypeTok{position=}\OperatorTok{-}\DecValTok{1}\NormalTok{, }\DataTypeTok{errors=}\OperatorTok{-}\DecValTok{1}\NormalTok{) }
+    
+\NormalTok{    \}}
+    \ControlFlowTok{if}\NormalTok{(ni}\OperatorTok{==}\DecValTok{1}\NormalTok{)\{}
+\NormalTok{      Matches <-}\StringTok{ }\KeywordTok{data.frame}\NormalTok{(Matchi)}
+\NormalTok{    \}}\ControlFlowTok{else}\NormalTok{\{}
+\NormalTok{      Matches <-}\StringTok{ }\KeywordTok{cbind}\NormalTok{(Matches, Matchi)}
+\NormalTok{    \}}
+\NormalTok{  \}}
+  \KeywordTok{return}\NormalTok{(Matches)}
+\NormalTok{\}}
+\end{Highlighting}
+\end{Shaded}
+
+Consider the following example.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{approx_multi_patternSearch}\NormalTok{(}\KeywordTok{c}\NormalTok{(}\StringTok{"Amlo"}\NormalTok{, }\StringTok{"Fest"}\NormalTok{),}\KeywordTok{c}\NormalTok{(}\StringTok{"festival"}\NormalTok{,}\StringTok{"Amlofest"}\NormalTok{, }\StringTok{"HOLa"}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##          Matchi Matchi Matchi
+## string        1      2      3
+## pattern       2      1     -1
+## position      0      0     -1
+## errors        1      0     -1
+\end{verbatim}
+
+
+\end{document}

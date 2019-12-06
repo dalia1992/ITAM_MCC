@@ -1,0 +1,238 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+library(data.tree)
+```
+
+```{r}
+Newtree  <- Node$new("Root")
+Newtree$AddChild ("i")
+Newtree$AddChild ("s")
+Newtree$AddChild ("t")
+Newtree$AddChild ("h")
+
+Newtree$AddChild ("Error")
+
+Newtree$i$AddChild("s \n shift = 0 \n Error=0")
+Newtree$i$AddChild("Error \n shift = 0 \n Error=1")
+
+Newtree$s$AddChild("h \n shift = 0 \n Error=0")
+Newtree$s$AddChild("Error \n shift = 0 \n Error=1")
+Newtree$s$AddChild("i \n shift = 0 \n Error=1")
+
+Newtree$t$AddChild("h \n shift = 0 \n Error=0")
+Newtree$t$AddChild("Error \n shift = 0 \n Error=1")
+
+Newtree$h$AddChild("s \n shift = 0 \n Error=1")
+Newtree$h$AddChild("t \n shift = 0 \n Error=1")
+
+
+Newtree$Error$AddChild("a")
+Newtree$Error$AddChild("f")
+Newtree$Error$AddChild("h")
+Newtree$Error$AddChild("n")
+Newtree$Error$AddChild("o")
+Newtree$Error$AddChild("r")
+Newtree$Error$AddChild("t")
+Newtree$Error$AddChild("not")
+
+Newtree$Error$a$AddChild("s \n shift = 0\n Error=1")
+Newtree$Error$a$AddChild("h \n shift = 0\n Error=1")
+Newtree$Error$a$AddChild("Error")
+
+Newtree$Error$h$AddChild("s \n shift = 0\n Error=1")
+Newtree$Error$h$AddChild("h \n shift = 0\n Error=1")
+Newtree$Error$h$AddChild("Error")
+
+Newtree$Error$n$AddChild("s \n shift = \n Error=1")
+Newtree$Error$n$AddChild("h \n shift = 0\n Error=1")
+Newtree$Error$n$AddChild("Error")
+
+
+Newtree$Error$o$AddChild("s \n shift = 0\n Error=1")
+Newtree$Error$o$AddChild("h \n shift = 0\n Error=1")
+Newtree$Error$o$AddChild("Error")
+
+Newtree$Error$f$AddChild("s \n shift = 0\n Error=1")
+Newtree$Error$f$AddChild("h \n shift = 0\n Error=1")
+Newtree$Error$f$AddChild("Error")
+
+Newtree$Error$r$AddChild("s \n shift = 0\n Error=1")
+Newtree$Error$r$AddChild("h \n shift = 0\n Error=1")
+Newtree$Error$r$AddChild("Error")
+
+
+Newtree$Error$t$AddChild("s \n shift = 0\n Error=1")
+Newtree$Error$t$AddChild("h \n shift = 0\n Error=1")
+Newtree$Error$t$AddChild("Error")
+
+Newtree$Error$not$AddChild("s \n shift = 0\n Error=1")
+Newtree$Error$not$AddChild("h \n shift = 0\n Error=1")
+Newtree$Error$not$AddChild("Error")
+
+
+Newtree$Error$a$Error$AddChild("a \n shift = 4")
+Newtree$Error$a$Error$AddChild("n \n shift = 3")
+Newtree$Error$a$Error$AddChild("i \n shift = 1")
+Newtree$Error$a$Error$AddChild("f \n shift = 4")
+Newtree$Error$a$Error$AddChild("o \n shift = 4")
+Newtree$Error$a$Error$AddChild("r \n shift = 4")
+Newtree$Error$a$Error$AddChild("t \n shift = 4")
+Newtree$Error$a$Error$AddChild("not \n shift = 4")
+
+
+Newtree$Error$h$Error$AddChild("a \n shift = 4")
+Newtree$Error$h$Error$AddChild("n \n shift = 4")
+Newtree$Error$h$Error$AddChild("i \n shift = 1")
+Newtree$Error$h$Error$AddChild("f \n shift = 4")
+Newtree$Error$h$Error$AddChild("o \n shift = 4")
+Newtree$Error$h$Error$AddChild("r \n shift = 4")
+Newtree$Error$h$Error$AddChild("t \n shift = 4")
+Newtree$Error$h$Error$AddChild("not \n shift = 4")
+
+
+
+Newtree$Error$n$Error$AddChild("a \n shift = 2")
+Newtree$Error$n$Error$AddChild("n \n shift = 4")
+Newtree$Error$n$Error$AddChild("i \n shift = 4")
+Newtree$Error$n$Error$AddChild("f \n shift = 4")
+Newtree$Error$n$Error$AddChild("o \n shift = 4")
+Newtree$Error$n$Error$AddChild("r \n shift = 4")
+Newtree$Error$n$Error$AddChild("t \n shift = 4")
+Newtree$Error$n$Error$AddChild("not \n shift = 4")
+
+
+
+Newtree$Error$o$Error$AddChild("a\n shift = 4")
+Newtree$Error$o$Error$AddChild("n\n shift = 4")
+Newtree$Error$o$Error$AddChild("i\n shift = 4")
+Newtree$Error$o$Error$AddChild("f\n shift = 4")
+Newtree$Error$o$Error$AddChild("o\n shift = 2")
+Newtree$Error$o$Error$AddChild("r\n shift = 4")
+Newtree$Error$o$Error$AddChild("t\n shift = 4")
+Newtree$Error$o$Error$AddChild("not \n shift = 4")
+
+
+
+Newtree$Error$f$Error$AddChild("a\n shift = 4")
+Newtree$Error$f$Error$AddChild("n\n shift = 4")
+Newtree$Error$f$Error$AddChild("i\n shift = 4")
+Newtree$Error$f$Error$AddChild("f\n shift = 4")
+Newtree$Error$f$Error$AddChild("o\n shift = 3")
+Newtree$Error$f$Error$AddChild("r\n shift = 4")
+Newtree$Error$f$Error$AddChild("t\n shift = 4")
+Newtree$Error$f$Error$AddChild("not \n shift = 4")
+
+
+
+Newtree$Error$r$Error$AddChild("a\n shift = 4")
+Newtree$Error$r$Error$AddChild("n\n shift = 4")
+Newtree$Error$r$Error$AddChild("i\n shift = 4")
+Newtree$Error$r$Error$AddChild("f\n shift = 4")
+Newtree$Error$r$Error$AddChild("o\n shift = 4")
+Newtree$Error$r$Error$AddChild("r\n shift = 4")
+Newtree$Error$r$Error$AddChild("t\n shift = 1")
+Newtree$Error$r$Error$AddChild("not \n shift = 4")
+
+
+
+Newtree$Error$t$Error$AddChild("a\n shift = 4")
+Newtree$Error$t$Error$AddChild("n\n shift = 4")
+Newtree$Error$t$Error$AddChild("i\n shift = 4")
+Newtree$Error$t$Error$AddChild("f\n shift = 4")
+Newtree$Error$t$Error$AddChild("o\n shift = 4")
+Newtree$Error$t$Error$AddChild("r\n shift = 4")
+Newtree$Error$t$Error$AddChild("t\n shift = 4")
+Newtree$Error$t$Error$AddChild("not \n shift = 4")
+
+
+
+Newtree$Error$not$Error$AddChild("shift = 4")
+
+
+```
+
+
+```{r}
+strings  <- c("anais", "oosh", "this", "forth")
+maxShift <- min(nchar(strings))
+Bs       <-unique(unlist(lapply(strings, 
+                               function(i){
+                                 substr(i,(nchar(i)-1),nchar(i))
+                               })))
+Chars   <- unique(unlist(lapply(strings,
+                                function(i){
+                                  substring(i,1:nchar(i), 1:nchar(i))
+                                }
+)))
+
+CharsErr1 <- c(Chars[-which(Chars%in%substring(Bs,1,1))], "not")
+CharsErr2 <- c(Chars[-which(Chars%in%substring(Bs,2,2))], "not")
+
+
+Shifts <- matrix(unlist(lapply(strings,
+                               function(i){
+                                 rbind(substring(i,1:(nchar(i)-2), 2:(nchar(i)-1)),(nchar(i)-2):1)
+                               }
+)), ncol=2, byrow=TRUE)
+
+Shifts <- cbind(Shifts, substring(Shifts[,1],1,1))
+Shifts <- cbind(Shifts, substring(Shifts[,1],2,2))
+
+
+
+Tree <- Node$new("Root")
+for (i  in 1:length(Bs)) {
+  Tree$AddChild(substring(Bs[i],1,1))$AddChild(substring(Bs[i],2,2))$AddSibling("Error")
+  Tree$children[[i]]$children[[1]]$shift <- 0
+  Tree$children[[i]]$children[[1]]$error <- 0
+  
+  Tree$children[[i]]$children[[2]]$shift  <- 0
+  Tree$children[[i]]$children[[2]]$error  <- 1
+  
+}
+
+Tree$AddChild("Error")
+
+auxTree <- Node$new("aux")
+
+for (i in 1:length(unique(substring(Bs,2,2)))) {
+  auxTree$AddChild(unique(substring(Bs,2,2))[i])
+  auxTree$children[[i]]$shift <-0
+  auxTree$children[[i]]$error <-1
+  
+}
+
+auxTree$AddChild("Error")
+
+for (i in 1:length(CharsErr2)) {
+  auxTree$Error$AddChild(CharsErr2[i])
+  auxTree$Error$children[[i]]$error <-2
+  auxTree$Error$children[[i]]$shift <-4
+  
+}
+
+for (i in 1:length(CharsErr1)) {
+  Tree$Error$AddChild(CharsErr1[i])$AddChildNode(auxTree)
+  if(CharsErr1[i]%in%Shifts[,3]){
+    mark <- which(CharsErr1[i]==Shifts[,3])
+    for (j in mark) {
+      Tree$Error$children[[i]]$aux$Error$children
+      if(is.null( Tree$Error$children[[i]]$aux$Error$children[[Shifts[j,4]]])==FALSE){
+         Tree$Error$children[[i]]$aux$Error$children[[Shifts[j,4]]]$shift <- Shifts[j,2]
+      }
+    }
+  }
+}
+
+
+
+```
+

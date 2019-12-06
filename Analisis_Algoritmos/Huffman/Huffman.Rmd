@@ -1,0 +1,178 @@
+---
+title: "Implementación de Huffman"
+author: "Dalia Camacho, Gabriela Vargas, Elizabeth Monroy"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Implementación
+En esta sección utilizamos el código de Huffman para obtener códigos variables para cada caracter dentro de un texto.  Para lograr esto se crea un árbol binario que se determina a partir de la frecuencia de caracteres. Además, obtenemos el código de bits para cada caracter recorriendo el árbol en profundidad con pre-orden y asignando un valor "0" a la rama izquierda y un valor "1" a la rama derecha.
+
+Para poder definir árboles en \texttt{R} utilizamos el paquete \texttt{data.tree}
+
+```{r}
+library(data.tree)
+```
+
+
+La función *Huffman* recibe como entrada el texto para el que se obtendrán los códigos de caracteres y tiene la opción de imprimir cada paso si la opción *Print=TRUE*. El default es *Print=FALSE*. Esta función entrega como salida el árbol que se genera con el algoritmo de Huffman.
+
+```{r}
+Huffman <- function(text, Print = FALSE){
+  # Se obtienen las frecuencias de los caracteres dentro del texto
+  Frequencies <- table(strsplit(text, "")[[1]])
+  # Se define un ambiente dentro de la función en el que se
+  # guardan los árboles de pasos intermedios
+  efun <- environment()
+  # n es el número de caracteres en el texto
+  n <- dim(Frequencies)
+  # Se inicializa Q como la tabla de caracteres y frecuencias
+  Q <- Frequencies
+  # Se inicia el ciclo para generar árboles con los dos valores menores
+  for(i in 1:(n-1)){
+    # Se define la raíz de un nuevo árbol
+    Newtree  <- Node$new(paste0("Tree ", i,
+                                " \n Count: ",
+                                min(Q)+min(Q[-min(Q)])))
+    # Su hijo de la rama izquierda es el objeto con menor frecuencia en Q,
+    # ya sea un caracter o un árbol construido previamente
+    x.freq   <- min(Q)
+    if(substr(names(which.min(Q)),3,3+nchar(n))==""){
+      Newtree$AddChild(paste0("Char: ", names(which.min(Q))[1], " \n Freq: ", x.freq))
+    }else{
+      Newtree$AddChildNode(get(
+        paste0("Tree_", substr(names(which.min(Q))[1],3,5)), envir = efun))
+    }
+    # Se elimina el mínimo del arreglo Q
+    Q        <- Q[-(which.min(Q)[1])]
+    # Ahora el hijo de la rama derecha es el mínimo en Q y se repite 
+    # el proceso realizado en la rama izquierda
+    y.freq   <- min(Q)
+    if(substr(names(which.min(Q)),3,5)==""){
+      Newtree$AddChild(paste0("Char: ", names(which.min(Q))[1], " \n Freq: ", y.freq))
+    }else{
+      Newtree$AddChildNode(get(
+        paste0("Tree_", substr(names(which.min(Q))[1],3,5)), envir = efun))
+    }  
+    Q        <- Q[-(which.min(Q)[1])]
+    # Se agrega el árbol generado como un nuevo nodo en Q cuya frecuencia
+    # es la suma del hijo de la rama izquierda y el de la derecha
+    z.freq   <- x.freq + y.freq
+    Q <- c(Q, z.freq)
+    names(Q)[length(Q)] <- paste0("T_",i)
+    if(Print){
+      print(Newtree)
+    }
+
+    assign(paste0("Tree_",i), Newtree, envir = efun)
+  }
+  # Se regresa el último árbol generado
+  return(get(paste0("Tree_", i), envir = efun))
+}
+
+```
+
+Hacemos un ejemplo pequeño mostrando la construcción del árbol con el texto "Hello World". Más adelante se hará con un texto más grande.
+
+```{r}
+HelloTree <- Huffman("Hello World", Print = TRUE)
+print(HelloTree)
+```
+
+Ahora definimos la función *getCoding* recibe un árbol binario obtenido con la función *Huffman* y da como salida una tabla que contiene los caracteres, su frecuencia, el código, el número de bits por un caracter y el total de bits usados para ese caracter en todo el texto.
+
+```{r}
+getCoding <- function(Tree){
+  # Se genera una lista de los árboles después de recorrerlos a profundidad
+  # con preorder
+  TravList <- Traverse(Tree,"pre-order")
+  # N es el número de subárboles 
+  N        <- length(TravList)
+  # Se definen arreglos char, freq y coding que van a 
+  # almacenar los caracteres, la frecuencia el código del caracter
+  char     <- c()
+  freq     <- c()
+  coding   <- c()
+  # code se utiliza para guardar el código.
+  code     <- ""
+  # Se recorre la lista de subárboles, si no se está en una hoja
+  # se agrega un cero,
+  # Si se está en una hoja, se busca el último cero del code y se cambia por un
+  # uno y se sigue recorriendo la lista.
+  for (i in 1:N) {
+    if(TravList[[i]]$isLeaf){
+      char   <- c(char, strsplit(TravList[[i]]$name, " ")[[1]][2])
+      if(char[length(char)]==""){
+        freq   <- c(freq,strsplit(TravList[[i]]$name, " ")[[1]][6])
+      }else{
+        freq   <- c(freq,strsplit(TravList[[i]]$name, " ")[[1]][5])
+      }
+      coding  <- c(coding, code)
+      if(any(strsplit(code,"")[[1]]=="0")){
+        aux     <- max(which(strsplit(code,"")[[1]]=="0"))
+        code    <- paste0(substr(code,1,aux-1), "1")
+      }
+    } else{
+      code   <- paste0(code,"0")
+    }
+  }
+  
+  # Se acomoda la información en una tabla y se ordena 
+  # por la frecuencia de los caracteres
+  CodingList      <- data.frame(cbind("character"=char, "frequency"=freq,
+                                      coding),
+                                      stringsAsFactors=FALSE)
+  CodingList$frequency <- as.numeric(CodingList$frequency)
+  CodingList$bits      <- nchar(CodingList$coding)
+  CodingList$Nbits     <- CodingList$frequency*CodingList$bits
+  CodingList           <- CodingList[order(CodingList$frequency, decreasing = TRUE),]
+  return(CodingList)
+}
+
+
+```
+
+Para el ejemplo de "Hello World" utilizamos el código anterior para obtener la codificación de los caracteres.
+
+```{r}
+tableHello <- getCoding(HelloTree)
+tableHello
+```
+
+Para este ejemplo el número de bits requeridos es `r sum(tableHello$Nbits)`. Con una codificiación fija se ocuparían `r ceiling(log2(8))+1` bits por caracter, por lo que necesitaríamos `r 11*(log2(8)+1)` bits.
+
+## Ejemplo
+
+Como ejemplo utilizamos el discurso de Obama de 2016, usamos este ejemplo ya que se ha utilizado en ejemplos de procesamiento de texto \url{https://programminghistorian.org/en/lessons/basic-text-processing-in-r#a-small-example}.
+
+### Obtenemos el texto
+
+```{r}
+base_url    <- "https://programminghistorian.org/assets/basic-text-processing-in-r"
+url         <- sprintf("%s/sotu_text/236.txt", base_url)
+text        <- paste(readLines(url), collapse = "\n")
+
+```
+
+### Generamos el árbol
+
+```{r}
+ObamaTree <- Huffman(text)
+print(ObamaTree)
+```
+
+### Obtenemos los códigos correspondientes
+
+```{r}
+tableObama <- getCoding(ObamaTree)
+tableObama
+```
+
+El número de bits requeridos es `r formatC(sum(tableObama$Nbits), format="e")`. Con una codificiación fija se ocuparían `r ceiling(log2(nrow(tableObama)))+1` bits por caracter, por lo que necesitaríamos `r formatC(sum(tableObama$frequency)*(log2(nrow(tableObama))+1), format="e")` bits. Por lo que el tamaño disminuye en un `r formatC((1-sum(tableObama$Nbits)/(sum(tableObama$frequency)*(log2(nrow(tableObama))+1)))*100, format="f", digits=2)`%.
+

@@ -1,0 +1,89 @@
+---
+Author: Gabriela Vargas, Dalia Camacho, Elizabeth Monroy
+Date: 09/10/2018
+output:
+  word_document: default
+  pdf_document: default
+---
+
+##Algoritmo Strassen para multiplicaci?n de matrices
+
+Strassen diseñó un método para multiplicar matrices cuadradas de orden 2 usando solo 7 multiplicaciones escalares, en vez de las 8 necesarias en el método clásico. De esta forma consiguió un algoritmo de matrices cuadradas $n\times n$
+de orden $n^{log7}=n^{2.81}$ superando asintóticamente al método clásico de orden $n^{log8}=n^{3}$.
+
+Dadas dos matrices cuadradas $A$ y $B$, de orden 2, el producto de matrices $C$ se define como $$\left(\begin{array}{cc}C_{11} & C_{12} \\C_{11} & C_{12}\end{array}\right)=\left(\begin{array}{cc} A_{11} & A_{12} \\A_{11} & A_{12}
+\end{array}\right)\cdot\left(\begin{array}{cc} B_{11} & B_{12} \\B_{11} & B_{12}
+\end{array}\right)$$
+
+Aplicando el m?todo tradicional de multiplicación de matrices, tenemos que:
+
+$$C_{11}= A_{11}\cdot B_{11}+A_{12}\cdot B_{12},\\ C_{12}= A_{11}\cdot B_{12}+A_{12}\cdot B_{22}, \\ C_{21}= A_{21}\cdot B_{11}+A_{22}\cdot B_{21}, \\ C_{22}= A_{21}\cdot B_{12}+A_{22}\cdot B_{22},$$
+En cada una de las cuatro ecuaciones se especifican dos multiplicaciones de $n/2\times n/2$ matrices y la suma de estos productos. 
+
+La idea del algoritmo Strassen es particionar las matrices $A$ y $B$ tal que en lugar de ocupar 8 multiplicaciones para obtener la matriz $C$ de orden 2, únicamente se ocupen 7. Este algoritmo consta de 4 pasos:
+
+1. Dividir las matrices $A$, $B$ y $C$ en $n/2\times n/2$ submatrices.
+2. Crear 10 matrices $S_{1},S_{2},...,S_{10}$, de $n/2\times n/2$ cada una y son resultado la suma o resta de las dos matrices creadas en el paso 1.
+3. Calcular 7 productos de matrices $P_{1},P_{2},...,P_{7}$ Usando las submatrices creadas en el paso 1 y las submatrices $S$ creadas en el paso 2.
+4.Calcular las submatrices $C_{11},C_{12},C_{21},C_{22}$ mediante la suma y resta de diferentes combinaciones de matrices $P_{i}$.
+
+
+
+##Implementación
+
+Se define una funci?n para ejecutar el algoritmo.
+```{r}
+divide <- function(A,r){
+	A   <- list(A)
+	A11 <- A[[1]][1:(r/2),1:(r/2)]
+	A12 <- A[[1]][1:(r/2),(r/2+1):r]
+	A21 <- A[[1]][(r/2+1):r,1:(r/2)]
+	A22 <- A[[1]][(r/2+1):r,(r/2+1):r]
+	A   <- list(X11=A11, X12=A12,X21=A21,X22=A22)
+	return(A)
+}
+
+strassen <- function(A,B){
+  A  <- divide(A, dim(A)[1])
+  B  <- divide(B, dim(B)[1])
+  M1 <- (A$X11+A$X22)%*%(B$X11+B$X22)
+  M2 <- (A$X21+A$X22)%*%B$X11
+  M3 <- A$X11%*%(B$X12-B$X22)
+  M4 <- (A$X22)%*%(B$X21-B$X11)
+  M5 <- (A$X11+A$X12)%*%B$X22
+  M6 <- (A$X21-A$X11)%*%(B$X11+B$X12)
+  M7 <- (A$X12-A$X22)%*%(B$X21+B$X22)
+ 
+  C11<-M1+M4-M5+M7
+  C12<-M3+M5
+  C21<-M2+M4
+  C22<-M1-M2+M3+M6
+ 
+  C<-rbind(cbind(C11,C12),cbind(C21,C22))
+
+ 
+  return(C)
+
+  }
+```
+
+Se prueba el algoritmo para calcular la multiplicaci?n de las matrices $A$ y $B$ por medio del algortimo Strassen.
+Se compara el resultado con la matriz $C$ que representa el resultado de la operaci?n de producto matricial en R.
+
+
+```{r}
+A<-matrix(round(runif(64,0,1)*10),8)
+print("Matriz A")
+A
+B<-matrix(round(runif(64,0,1)*10),8)
+print("Matriz B")
+B
+print("Resultado de multiplicaci?n de matrices usando la funci?n Strassen")
+strassen(A,B)
+print("Resultado de multiplicaci?n de matrices usando el operador de R")
+C<-A%*%B
+C
+```
+
+
+

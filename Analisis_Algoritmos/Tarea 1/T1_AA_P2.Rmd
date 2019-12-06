@@ -1,0 +1,101 @@
+---
+title: "Parte B"
+author: "Dalia Camacho, Gabriela Vargas, Elizabeth Monroy"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(ggplot2)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##Pregunta 1.1
+¿Para qué valores de n el algoritmo de inserción ($8n^2$) corre más rápido que el de mezcla directa ($64nlog_2(n)$)?
+```{r}
+
+Inser1  <- function(n){8*n^2}
+Mezcla1 <- function(n){64*n*log2(n)}
+n       <- 0:100
+
+ggplot()+ theme_bw()+
+  geom_line(aes(n, Inser1(n), col="Inserción"))+
+  geom_line(aes(n, Mezcla1(n), col="Mezcla"))+
+  xlab("n")+
+  ylab("tiempo")+
+  ggtitle("Comparación de los métodos de ordenamiento de inserción y mezcla")
+## Warning: Removed 1 rows containing missing values (geom_path).
+
+
+j       <- 40
+
+while(j<50){
+  if(Inser1(j)-Mezcla1(j)>0){
+    break
+  }
+  j <- j+1
+}
+
+print(paste0("El algoritmo de inserción corre más rápido que el de mezcla para valores menores a ", round((j),1), "."))
+## [1] "El algoritmo de inserción corre más rápido que el de mezcla para valores menores a 43.6 ."
+```
+
+##Pregunta 1.2
+¿Para qué valores de n el algoritmo de inserción ($6n^2$) corre más rápido que el de mezcla directa ($32nlog_2(n)+5n$)?
+
+```{r}
+n<-0:40
+Inser2  <- function(n){6*n^2}
+Mezcla2 <- function(n){32*n*log2(n)+5*n}
+
+ggplot()+ theme_bw()+
+  geom_line(aes(n, Inser2(n), col="Inserción"))+
+  geom_line(aes(n, Mezcla2(n), col="Mezcla"))+
+  xlab("n")+
+  ylab("tiempo")+
+  ggtitle("Comparación de los métodos de ordenamiento de inserción y mezcla")
+## Warning: Removed 1 rows containing missing values (geom_path).
+
+
+j       <- 23
+
+while(j<27){
+  if(Inser2(j)-Mezcla2(j)>0){
+    break
+  }
+  j <- j+1
+}
+
+print(paste0("El algoritmo de inserción corre más rápido que el de mezcla para valores menores a ", round((j),1), "."))
+```
+##Pregunta 2
+
+¿Cuál es el valor más pequeño de n tal que un algoritmo cuyo tiempo de ejecuciónes $100n^2$ corre más rápido que un algoritmo cuyo tiempo de ejecución es $2^n$?
+
+```{r}
+
+cuad <- function(n){100*n^2}
+expo <- function(n){2^n}
+
+n <- 0:20
+
+ggplot()+ theme_bw()+
+  geom_line(aes(n, cuad(n), col="Cuadrático"))+
+  geom_line(aes(n, expo(n), col="Exponencial"))+
+  xlab("n")+
+  ylab("tiempo")+
+  ggtitle("Comparaciónn de algoritmos")
+
+
+j <- 1
+
+while(j<20){
+  if(expo(j)-cuad(j)>0){
+    break
+  }
+  j <- j+1
+}
+
+print(paste0("El valor más pequeño de n para el que el algoritmo de tiempo cuadrático 100n^2 corre más rápido que el exponencial 2^n es: ", round((j),1), "."))
+
+
+```

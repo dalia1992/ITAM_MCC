@@ -1,0 +1,201 @@
+---
+title: "Tarea 2"
+author: "Dalia Camacho, Gabriela Vargas, Elizabeth Monroy"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Parte B
+
+```{r}
+library(Rcpp)
+library(ggplot2)
+library(grid)
+library(gridExtra)
+library(knitr)
+sourceCpp( "~/Dropbox/ITAM_MCC/Semestre_1/Algoritmos/Tarea 2/Insercion.cpp")
+sourceCpp( "~/Dropbox/ITAM_MCC/Semestre_1/Algoritmos/Tarea 2/Merge.cpp")
+set.seed(48970)
+```
+
+####Ejemplo de prueba 
+Se genera un arreglo de tamaño 10 con valores del uno al 100.
+```{r}
+A <- sample(1:100,10)
+print(A)
+```
+Ordenamos con el algoritmo de inserción
+```{r}
+insercion(A)
+```
+
+Ordenamos con el algoritmo merge sort
+```{r}
+merge_sort(A)
+```
+
+Datos para insercion
+```{r}
+Ns <- c(seq(1,751, by=250), seq(1000, 10000, by=1000), 
+        seq(2*10^4, 10^5, by=2*10^4), seq(2*10^5, 10^6, by=2*10^5))
+
+Muestra <- sample(10^6)
+
+inserTime <- NULL
+
+for(i in Ns){
+     inserTime <- c(inserTime, system.time(insercion(Muestra[1:i]))[3])
+
+}
+```
+
+Datos para merge sort
+```{r}
+mergeTime <- NULL
+
+for(i in Ns){
+     mergeTime <- c(mergeTime, system.time(merge_sort(sample(i)))[3])
+
+}
+
+```
+
+```{r}
+Tiempos <- rbind(c("Insercion", format(inserTime[c(5,14,19,24)], digits=2)), 
+                 c("Merge Sort", formatC(mergeTime[c(5,14,19,24)],digits = 2)))
+colnames(Tiempos)<- c("Método", "1000", "10,000", "100,000", "1,000,000")
+
+kable(Tiempos)
+
+```
+
+####Generar gráficas
+```{r, fig.width=8, fig.height=8}
+g1 <- ggplot()+theme_bw()+
+  geom_line(aes(Ns[1:14], inserTime[1:14], color="Inserción", linetype="Inserción"))+
+  geom_line(aes(Ns[1:14], mergeTime[1:14], color="Merge", linetype="Merge"))+
+  ggtitle("")+
+  xlab("Tamaño del vector")+
+  ylab("Tiempo que toma en correr")+
+  theme(legend.position = "none", legend.title = element_blank())
+
+g2 <- ggplot()+theme_bw()+
+  geom_line(aes(Ns[1:19], inserTime[1:19], color="Inserción", linetype="Inserción"))+
+  geom_line(aes(Ns[1:19], mergeTime[1:19], color="Merge", linetype="Merge"))+
+  ggtitle("")+
+  xlab("Tamaño del vector")+
+  ylab("Tiempo que toma en correr")+
+  theme(legend.position = "none", legend.title = element_blank())
+
+g3 <- ggplot()+theme_bw()+
+  geom_line(aes(Ns[1:24], inserTime, color="Inserción", linetype="Inserción"))+
+  geom_line(aes(Ns[1:24], mergeTime, color="Merge", linetype="Merge"))+
+  ggtitle("")+
+  xlab("Tamaño del vector")+
+  ylab("Tiempo que toma en correr")+
+  theme(legend.position = "bottom", legend.title = element_blank())
+
+grid.arrange(g1,g2,g3, top= textGrob("Comparación entre merge sort e inserción", gp=gpar(fontsize=15)),
+              heights=c(12,12,17)) 
+  
+
+
+```
+
+
+
+
+## Parte C
+
+For each function $f(n)$ and time $t$ in ther following table determine the largest size $N$ of a problem that can be solced in time $t$, assuming that the algorithm to solve the problem takes $f(n)$ microseconds.
+
+```{r }
+# Escalar microsegundos a segundos
+micro  <- 1.e-6
+# Definir tiempos para los que se determina la N
+tiempo <- c(Segundo = 1, Minuto = 60, Dia = 60*60*24, Mes = 60*60*24*30, Año = 60*60*24*365)
+tiempo_micro <- tiempo/micro
+```
+
+
+Para $log_2(n)$, $\sqrt n$ y $n$ resolvemos analíticamente.
+```{r }
+# log(n)
+results <- c("log(n)", paste0("2^(", formatC(tiempo_micro, digits=2), ")"))
+
+# sqrt(n)
+results <- rbind(results,c("sqrt(n)", formatC(tiempo_micro^2, digits=2)))
+
+# n
+results <- rbind(results,c("n", formatC(tiempo_micro, digits=2)))
+```
+
+Para $n*log_2(n)$ utilizamos el método de Newton para encontrar la N correspondiente.
+
+```{r }
+# n*log(n)
+#Usando el método de Newton
+fun_nlogn <- function(n,tiempo){n*log2(n)-tiempo}
+
+grad_fun_nlogn <- function(n){log2(n)+1/(log(2)*n)}
+
+res <- NULL
+tol <- 0.5
+
+for(i in tiempo_micro){
+  n <- i/2
+  while (abs(fun_nlogn(n, i))>tol) {
+    n <- n - fun_nlogn(n, i)/grad_fun_nlogn(n)
+  }
+  res <- c(res, floor(n))
+}
+
+results <- rbind(results, c("n*log(n)", formatC(res,digits = 2, format = "e")))
+```
+
+Para $n^2$, $n^3$ y $2^n$ también resolvemos analíticamente.
+
+```{r }
+# n^2
+results <- rbind(results, c("n^2", formatC(tiempo_micro^(1/2), digits = 2)))
+
+# n^3
+results <- rbind(results, c("n^3", formatC(tiempo_micro^(1/3), digits = 2)))
+
+# 2^n
+results <- rbind(results, c("2^n", formatC(log2(tiempo_micro), digits = 0, format = "f")))
+```
+
+Para $n!$ encontramos la $N$ utilizando búsqueda binaria.
+
+```{r }
+# n!
+
+# Búsqueda binaria
+funfact <- function(n, tiempo){factorial(n)-tiempo}
+res     <- "n!"
+for(i in 1:length(tiempo_micro)){
+  L <- 1
+  U <- as.numeric(results[7,i+1])-1
+  while (floor(L)!=floor(U)) {
+    M <- (L+U)/2
+    if(funfact(M, tiempo_micro[i])<0){
+      L <- M
+    }else{
+      U <- M
+    }
+  }
+  res <- c(res, floor(U))
+}
+
+results <- rbind(results, res)
+rownames(results) <- NULL
+```
+
+
+```{r }
+kable(results)
+```
