@@ -1,0 +1,103 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+
+\title{Arquitectura de computadoras: Ejercicio RTL}
+\author{Dalia Camacho García Formentí }
+\date{}
+
+\usepackage{natbib}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{multicol}
+\usepackage{amsmath}
+\begin{document}
+
+\maketitle
+\section{Pregunta  1}
+Diseñe una computadora capaz de realizar las siguientes instrucciones. Para las funciones control, basta con mencionar qué controla cada una y cuántas son. Debe incluirse diagrama a bloques de todos los componentes y sus interconexiones.
+
+\begin{table}[H]
+\centering 
+\begin{tabular}{ccl}
+Código & Mnemónico & Comentario\\
+00 & LD INDIR & $A\leftarrow M[PTR]$.\\
+01 & LDI PTR & $PTR\leftarrow dato $.\\
+02 & INC PTR & $PTR\leftarrow PTR +1$.\\
+03 & MOVR & $R\leftarrow A$.\\
+04 & ADDR & $A\leftarrow A+R$.\\
+05 & ADDI & $A\leftarrow A+dato$.\\
+06 & SHL& $A\leftarrow shlA$.\\
+07 & OR & $A\leftarrow A \lor R$.\\
+\end{tabular}
+\end{table}
+
+\subsection*{Microoperaciones}
+\begin{multicols}{2}
+\textbf{FETCH}\\
+$t_0:MAR \leftarrow PC$\\
+$t_1: MBR \leftarrow M[MAR]$,  \\  $PC \leftarrow PC +1$\\
+$t_2: IR \leftarrow MBR$\\\\
+
+\noindent \textbf{LD INDIR}\\
+$q_1t_3: MAR \leftarrow PTR$\\
+$q_1t_4: MBR \leftarrow M[MAR]$\\
+$q_1t_5: A\leftarrow MBR$,\\
+$T\leftarrow 0$\\\\
+
+\noindent \textbf{LDI PTR}\\
+$q_2t3: MAR \leftarrow PC$\\
+$q_2t_4: MBR\leftarrow M[MAR]$, \\ $PC \leftarrow PC +1$\\
+$q_2t_5: PTR \leftarrow MBR$,\\
+$T \leftarrow 0$\\\\
+
+\noindent \textbf{INC PTR}\\
+$q_3t_3: PTR \leftarrow PTR + 1$,\\
+$T \leftarrow 0$\\\\
+
+\noindent \textbf{MOVR}\\
+$q_4t_3: R\leftarrow A$,\\
+$T \leftarrow 0$\\\\
+
+\noindent \textbf{ADDR}\\
+$q_5t_3: A\leftarrow A+ R$, $T \leftarrow 0$\\\\
+\noindent \textbf{ADDI}\\
+$q_6t_3: MAR \leftarrow PC$\\
+$q_6t_4: MBR\leftarrow M[MAR]$,\\  $PC \leftarrow PC +1$\\ 
+$q_6t_5: A \leftarrow A+MBR$,\\
+$T \leftarrow 0$\\\\
+
+\noindent \textbf{SHL}\\
+$q_7t_3: A \leftarrow shl(A)$,\\
+$T \leftarrow 0$\\\\\\
+
+\noindent \textbf{OR}\\
+$q_8t_3: A \leftarrow A \lor R$,\\
+$T \leftarrow 0$
+\end{multicols}
+\subsection*{Señales de control}
+$MAR \leftarrow PC := X_1= t_0 + q_2t_3+q_6t_3$\\
+$MAR \leftarrow PTR := X_2=q_1t_5$\\
+
+\noindent $MBR\leftarrow M[MAR]:= X_3= t_1+q_1t_4+q_2t_4+q_6t_4$\\
+
+\noindent $PC\leftarrow PC+1:= X_4=t_1+q_2t_4+q_6t_4$\\
+
+\noindent $IR\leftarrow MBR:= X_5 = t_2$\\
+
+\noindent $A\leftarrow MBR:= X_6= q_1t_5 + $\\
+$A\leftarrow A+ R:= X_{7}=q_5t_3$\\
+$A\leftarrow A +MBR:= X_{8}= q_6t_5$\\
+$A\leftarrow shl(A):=X_{9}=q_7t_3$\\
+$A\leftarrow A\lor R: X_{10}=q_8t_3$\\
+
+\noindent $PTR \leftarrow MBR:= X_{11}=q_2t_5$\\
+$PTR\leftarrow PTR+1: X_{12}=q_3t_3$\\
+
+\noindent $R \leftarrow A: X_{13}=q_4t_3$\\
+
+\noindent $T\leftarrow 0 := X_{14} = q_1t_5+q_2t_5+q_3t_3+q_4t_3+q_5t_3+q_6t_5+q_7t_3+q_8t_3$\\
+
+\subsection{•}
+
+
+\end{document}
