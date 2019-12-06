@@ -1,0 +1,214 @@
+---
+title: "Tarea 1"
+author: "Dalia Camacho"
+date: "August 14, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(warn=-1)
+```
+
+En el ejemplo simple que vimos en la sección 1.4, utilizamos una sola muestra de entrenamiento para evaluar el algoritmo. ¿Será posible que escogimos una muestra atípica?
+
+####1. Corre el ejemplo con otra muestra y reporta tus resultados de error de entrenamiento y error de prueba para los tres métodos.
+
+Se cargan las librerías necesarias, se define una semilla y la función del ejemplo de la sección 1.2.
+
+```{r}
+library(ggplot2)
+# Definir semilla de números aleatorios para reproducibilidad
+set.seed(554884)
+
+# Definir función f (desconocida) de la cual se originan los datos verdaderos
+f <- function(x){
+  ifelse(x < 10, 1000*sqrt(x), 1000*sqrt(10))
+}
+```
+
+Se generan los datos para la muestra de entrenamiento y datos de prueba:
+
+```{r}
+# Obtener una muestra de la variable x. 
+# (En el ejemplo eran años de estudio, por eso supuse que podían ser de una distribución poisson)
+x             <- rpois(250, 8)
+# Encontrar la variable y dada por f(x)+eps
+error         <- rnorm(length(x), 0, 500)
+y             <- f(x) + error
+
+datos_entrena <- data.frame(x=x[1:50], y=y[1:50])
+datos_prueba  <- data.frame(x=x[51:250], y=y[51:250])
+
+```
+
+Encontrar los modelos para los datos de entrenamiento con formas funcionales: lineal, loess con span de 0.33 y loess con span de 1.
+
+```{r}
+# Obtener modelo lineal para datos de entrenamiento
+mod_lineal   <- lm(y~x, datos_entrena)
+
+#Modelo loess con span de 0.3
+mod_loess_03 <- loess(y~x, datos_entrena, span = 0.3)
+
+#Modelo loess con span de 1
+mod_loess_1 <- loess(y~x, datos_entrena, span = 1)
+
+```
+
+Graficar los distintos modelos:
+
+```{r}
+ggplot(datos_entrena, aes(x,y))+
+  theme_bw()+
+  geom_smooth(method = "lm", se=FALSE, color="red")+
+  geom_smooth(method = "loess", span=0.3, se=FALSE, color="red")+
+  geom_smooth(method = "loess", span=1, se=FALSE, color="gray")+
+  geom_point()+
+  xlab("Años de estudio")+
+  ylab("Ingreso")+
+  scale_y_continuous(breaks = seq(1000, 6000, by=500))+
+  scale_x_continuous(breaks = seq(0, 18, by=2))
+
+
+```
+
+Calcular error de entrenamiento:
+
+```{r}
+# Se obtiene el error de entrenamiento para el modelo lineal
+Err_lineal <- sqrt(mean((datos_entrena$y - mod_lineal$fitted.values)^2))
+
+# Se obtiene el error de entrenamiento para el modelo lineal
+Err_loess_03 <- sqrt(mean((datos_entrena$y - mod_loess_03$fitted)^2))
+
+# Se obtiene el error de entrenamiento para el modelo lineal
+Err_loess_1 <- sqrt(mean((datos_entrena$y - mod_loess_1$fitted)^2))
+
+```
+
+Calcular error de prueba
+
+```{r}
+# Se obtiene el error de prueba para el modelo lineal
+Err_pureba_lineal <- sqrt(mean((datos_prueba$y -
+                                  predict(mod_lineal,datos_prueba))^2))
+
+# Se obtiene el error de entrenamiento para el modelo lineal
+Err_prueba_loess_03 <- sqrt(mean((datos_prueba$y -
+                                    predict(mod_loess_03, datos_prueba))^2, na.rm = TRUE))
+
+# Se obtiene el error de entrenamiento para el modelo lineal
+Err_prueba_loess_1 <-sqrt(mean((datos_prueba$y - 
+                                  predict(mod_loess_1, datos_prueba))^2, na.rm = TRUE))
+```
+
+Poner errores en un data frame
+
+```{r}
+Errores <- data.frame(cbind(c("Lineal", "Loess 0.3", "Loess 1"),
+                            formatC(matrix(c(Err_lineal, Err_pureba_lineal,
+                                             Err_loess_03, Err_prueba_loess_03,
+                                             Err_loess_1, Err_prueba_loess_1), ncol = 2, byrow = T),
+                                    format="f", digits=1)))
+names(Errores) <- c("Modelo", "Error de entrenamiento","Error de prueba")
+Errores
+```
+
+####2. Opcional (difícil): evalúa los tres métodos comparando estos valores para un número grande de distintas simulaciones de los datos de entrenamiento.
+
+Definir número de simulaciones y tamaño de conjuntos de prueba y entrenamiento
+```{r}
+# Número de simulaciones
+Nsim           <- 100
+# Tamaño del conjunto de entrenamiento
+Nentrena <- 1000
+# Tamaño de conjunto de prueba
+Nprueba        <- 1000
+```
+
+Loop para generar errores de prueba para distintas muestras
+```{r}
+# Definir vectores con errores de prueba y entrenamiento
+Errores_lineal   <- c()
+Errores_loess_03 <- c()
+Errores_loess_1  <- c()
+
+Errores_prueba_lineal   <- c()
+Errores_prueba_loess_03 <- c()
+Errores_prueba_loess_1  <- c()
+
+for (i in 1:Nsim) {
+  # Obtener una muestra de la variable x. 
+  # Debido a warnings cambio la distribución de poisson a gamma
+  x             <- rgamma(Nentrena+Nprueba, 8,1)
+  
+  # Encontrar la variable y dada por f(x)+eps
+  error         <- rnorm(length(x), 0, 500)
+  y             <- f(x) + error
+  
+  datos_entrena <- data.frame(x=x[1:Nentrena], y=y[1:Nentrena])
+  datos_prueba  <- data.frame(x=x[(Nentrena+1):(Nentrena+Nprueba)],
+                              y=y[(Nentrena+1):(Nentrena+Nprueba)])
+  
+  # Obtener modelo lineal para datos de entrenamiento
+  mod_lineal   <- lm(y~x, datos_entrena)
+  
+  #Modelo loess con span de 0.3
+  mod_loess_03 <- loess(y~x, datos_entrena, span = 0.3)
+  
+  #Modelo loess con span de 1
+  mod_loess_1 <- loess(y~x, datos_entrena, span = 1)
+  
+  # Se obtiene el error de entrenamiento para el modelo lineal
+  Errores_lineal <- c(Errores_lineal, sqrt(mean((datos_entrena$y - mod_lineal$fitted.values)^2)))
+  
+  # Se obtiene el error de entrenamiento para el modelo lineal
+  Errores_loess_03 <- c(Errores_loess_03, sqrt(mean((datos_entrena$y - mod_loess_03$fitted)^2)))
+  
+  # Se obtiene el error de entrenamiento para el modelo lineal
+  Errores_loess_1 <- c(Errores_loess_1,sqrt(mean((datos_entrena$y - mod_loess_1$fitted)^2)))
+  
+  # Se obtiene el error de prueba para el modelo lineal
+  Errores_prueba_lineal <-c(Errores_prueba_lineal,
+                            sqrt(mean((datos_prueba$y -
+                                         predict(mod_lineal,datos_prueba))^2)))
+  
+  # Se obtiene el error de entrenamiento para el modelo lineal
+  Errores_prueba_loess_03 <-c(Errores_prueba_loess_03,
+                              sqrt(mean((datos_prueba$y -
+                                           predict(mod_loess_03, datos_prueba))^2,
+                                        na.rm = TRUE)))
+  
+  # Se obtiene el error de entrenamiento para el modelo lineal
+  Errores_prueba_loess_1 <-c(Errores_prueba_loess_1, 
+                             sqrt(mean((datos_prueba$y - predict(mod_loess_1, datos_prueba))^2, na.rm = TRUE)))
+  
+  
+  
+}
+
+```
+
+Graficar errores
+```{r}
+ERR_data <- data.frame(cbind(c(rep("Lineal", 3*Nsim), rep("Loess_03", 3*Nsim),
+                               rep("Loess_1",3*Nsim)),
+                             c(Errores_lineal, Errores_loess_03, Errores_loess_1),
+                             c(Errores_prueba_lineal, Errores_prueba_loess_03,
+                               Errores_prueba_loess_1)))
+names(ERR_data) <- c("Modelo", "Error_entrena", "Error_prueba")
+ggplot(ERR_data, aes(Modelo, as.numeric(as.character(Error_entrena))))+
+  theme_bw()+
+  geom_boxplot()+
+  xlab("Error de entrenamiento")+
+  ylab("")
+
+ggplot(ERR_data, aes(Modelo, as.numeric(as.character(Error_prueba))))+
+  theme_bw()+
+  geom_boxplot()+
+  xlab("Error de prueba")+
+  ylab("")
+
+```
+

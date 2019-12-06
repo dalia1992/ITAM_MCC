@@ -1,0 +1,198 @@
+---
+title: "Probar Modelos Speed Dating"
+output: 
+  pdf_document: 
+    keep_tex: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, message=FALSE, include=FALSE}
+library(tidyverse)
+library(glmnet)
+library(keras)
+```
+
+```{r, message=FALSE, warning=FALSE, include=FALSE}
+datos <- read_csv("datos_Speed_Dating_limpios1.csv")
+datos <- datos %>% select(-"X1")
+```
+
+```{r, include=FALSE}
+devianza  <- function(p, y){
+  -2*mean(y * log(p) + (1-y) * log(1 - p))
+}
+
+ErrClass <- function(p,y){
+  sum(abs(p-y))/length(p)
+}
+```
+
+
+
+```{r, include=FALSE}
+set.seed(291118)
+waves      <- 1:21
+entrena    <- sample(waves, 9, replace = FALSE)
+valida     <- sample(waves[-entrena], 6)
+prueba     <- waves[-c(entrena,valida)]
+
+```
+
+```{r, message=FALSE, include=FALSE}
+datosEntrena <- datos[which(datos$wave%in%entrena),]
+datosValida  <- datos[which(datos$wave%in%valida),]
+datosPrueba  <- datos[which(datos$wave%in%prueba),]
+```
+
+
+```{r, include=FALSE}
+Xentrena <- as.matrix(datosEntrena %>% select(-c("iid", "wave", "pid", "match")))
+XValida  <- as.matrix(datosValida %>% select(-c("iid", "wave", "pid", "match")))
+XPrueba  <- as.matrix(datosPrueba %>% select(-c("iid", "wave", "pid", "match")))
+```
+
+
+
+## Regresión logística 
+
+```{r, include=FALSE}
+datosEntrenaLog <- datosEntrena %>%  select(-contains("_part"))
+datosValidaLog  <- datosValida %>%  select(-contains("_part"))
+datosPruebaLog  <- datosPrueba %>%  select(-contains("_part"))
+
+```
+
+
+```{r, include=FALSE}
+Xentrena <- as.matrix(datosEntrenaLog %>% select(-c("iid", "wave", "pid", "match")))
+XValida  <- as.matrix(datosValidaLog %>% select(-c("iid", "wave", "pid", "match")))
+XPrueba  <- as.matrix(datosPruebaLog %>% select(-c("iid", "wave", "pid", "match")))
+```
+
+```{r, include=FALSE}
+YEntrena <- unlist(datosEntrenaLog %>% select("match"))
+YValida  <- unlist(datosValidaLog %>% select("match"))
+YPrueba  <- unlist(datosPruebaLog %>% select("match"))
+```
+
+
+```{r}
+modeloLog1 <- glmnet(x=Xentrena, y=YEntrena, family = "binomial", 
+                     intercept = FALSE, lambda =0 )
+```
+
+
+```{r}
+PredEntrena <- predict(modeloLog1, Xentrena, type = "response")
+devianza(PredEntrena,YEntrena)
+```
+```{r}
+PredMatch   <- as.numeric(predict(modeloLog1, Xentrena, type = "class"))
+1-ErrClass(PredMatch,YEntrena)
+```
+
+
+
+
+```{r}
+PredPrueba <- predict(modeloLog1, XPrueba, type = "response")
+devianza(PredPrueba,YPrueba)
+```
+
+```{r}
+PredMatchPrueba   <- as.numeric(predict(modeloLog1, XPrueba, type = "class"))
+1-ErrClass(PredMatchPrueba,YPrueba)
+```
+
+### Agregando regularización
+
+```{r}
+modeloLogLasso <- cv.glmnet(x = Xentrena, y = YEntrena, alpha = 1) #alpha=1 para lasso
+plot(modeloLogLasso)
+
+```
+
+
+```{r}
+LambdaMin <- modeloLogLasso$lambda.min
+Lambda1se <- modeloLogLasso$lambda.1se
+```
+
+#### Elegir entre las dos lambdaas con la muestra de validación
+##### Lambda Min
+
+```{r}
+modeloLogLassoLambdamin <- glmnet(x=Xentrena, y=YEntrena, family = "binomial", 
+                     intercept = FALSE, alpha = 1, lambda = LambdaMin )
+```
+
+
+```{r}
+PredEntrena <- predict(modeloLogLassoLambdamin, Xentrena, type = "response")
+devianza(PredEntrena,YEntrena)
+```
+
+```{r}
+PredMatch   <- as.numeric(predict(modeloLogLassoLambdamin, Xentrena, type = "class"))
+1-ErrClass(PredMatch,YEntrena)
+```
+
+
+```{r}
+PredValida <- predict(modeloLogLassoLambdamin, XValida, type = "response")
+devianza(PredValida,YValida)
+```
+
+```{r}
+PredMatchValida   <- as.numeric(predict(modeloLogLassoLambdamin, XValida, type = "class"))
+1-ErrClass(PredMatchValida,YValida)
+```
+##### Lambda 1se
+
+```{r}
+modeloLogLassoLambda1se <- glmnet(x=Xentrena, y=YEntrena, family = "binomial", 
+                     intercept = FALSE, alpha = 1, lambda = Lambda1se )
+```
+
+
+```{r}
+PredEntrena <- predict(modeloLogLassoLambda1se, Xentrena, type = "response")
+devianza(PredEntrena,YEntrena)
+```
+
+```{r}
+PredMatch   <- as.numeric(predict(modeloLogLassoLambda1se, Xentrena, type = "class"))
+1-ErrClass(PredMatch,YEntrena)
+```
+
+
+```{r}
+PredValida <- predict(modeloLogLassoLambda1se, XValida, type = "response")
+devianza(PredValida,YValida)
+```
+
+```{r}
+PredMatchValida   <- as.numeric(predict(modeloLogLassoLambda1se, XValida, type = "class"))
+1-ErrClass(PredMatchValida,YValida)
+```
+
+Elegimos la lambda 1se 
+
+#### Muestra de Prueba
+```{r}
+PredPrueba <- predict(modeloLogLassoLambda1se, XPrueba, type = "response")
+devianza(PredPrueba, YPrueba)
+```
+
+```{r}
+PredMatchPrueba   <- as.numeric(predict(modeloLogLassoLambda1se, XPrueba, type = "class"))
+1-ErrClass(PredMatchPrueba,YPrueba)
+```
+
+```{r}
+table(YPrueba, PredMatchPrueba)
+```
+

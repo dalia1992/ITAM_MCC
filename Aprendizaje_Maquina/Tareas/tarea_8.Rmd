@@ -1,0 +1,230 @@
+---
+title: "Tarea 8"
+author: "FG"
+
+output: html_document
+---
+
+
+Considera la siguiente red para un problema de clasificación binaria:
+
+```{r}
+library(igraph)
+gr <- graph(c(1,2,1,3,2,4,3,4))
+plot(gr, layout = matrix(c(-2,0,0,1,0,-1,2,0), byrow=T, ncol=2),
+     vertex.label=c('X1','a_1','a_2','p1'), 
+     vertex.size=50, vertex.color='salmon', vertex.label.cex=1.5,
+     vertex.label.color='white',vertex.frame.color=NA,
+     edge.label=c(0.2,-0.3,-1,2)
+)
+```
+
+
+Supón que los sesgos son 0 para la unidad $a_1$, 0 para la unidad $a_2$ y -0.5 para la unidad $p$.
+
+1. Escribe cada $\theta_{i,j}^{(l)}$ según la notación de clase e identifica su valor. Por ejemplo, tenemos que $\theta^{(1)}_{1,0} = 0$ (tienes que escribir 7 valores como este). Escribe las matrices $\Theta^{(1)}$ y $\Theta^{(2)}$
+
+2. Supón que tenemos un caso (observación) con $(x, p)=(1, 0)$. ¿Qué es $a_1^{(1)}$? Haz forward feed para calcular los valores de $a_1^{(2)}$, $a_2^{(2)}$ y $p=a_1^{(3)}$.
+
+```{r}
+# Creamos la función h que trabaja en cada neurona
+hfun <- function(x,beta){
+  aux <- c(1,x)%*%beta
+  exp(aux)/(1+exp(aux))
+}
+```
+
+```{r}
+# Definir x=1
+x <- 1
+p <- 0
+# Calcular valores con feeed forward
+a1     <- hfun(x, c(0,0.2))
+a2     <- hfun(x, c(0, -0.3))
+p_est  <- hfun(c(a1,a2),c(-0.5, -1, 2))
+
+c(a1=a1, a2=a2, p_est=p_est)
+
+```
+
+
+3. Calcula la devianza para el caso $(x, y)=(1, 0)$
+```{r}
+dev <- -2*(p*log(p_est)+(1-p)*log(1-p_est))
+dev
+```
+La devianza para (x,p)=(1,0) es: `r dev`.
+
+4. Según el cálculo que hiciste en 2 y 3, intuitivamente, ¿qué conviene hacer con los dos últimos pesos de la última capa para reducir la devianza? ¿Incrementarlos o disminuirlos? 
+
+Sería conveniente disminuir los pesos en la última capa, ya que la p observada es cero y la probabilidad estimada es cercana 0.5. Al disminuir el valor de los pesos de la última capa, se tendría una p estimada menor y la devianza se reduciría.
+
+5. Según tu cálculo de 2, y 3, ¿qué conviene hacer con
+las unidades
+$a_1^{(2)}$, $a_2^{(2)}$  para reducir la devianza? 
+
+Para disminuir la devianza convendría aumentar el valor de $a_1^{(2)}$ y reducir el valor de $a_2^{(2)}$.
+
+6. Usando el inciso anterior, contesta qué conviene hacer con los pesos $\Theta^{(1)}$ para reducir la devianza.
+
+Para reducir la devianza se tendrían que aumentar los pesos $\theta_{1,j}^{(1)}$ y disminuir los pesos en $\theta_{2,j}^{(1)}$ con $j\in \{0,1\}$. 
+
+7. Error en la última capa (3): Calcula $\delta^{(3)}_1$
+```{r}
+delta_3 <- p_est-p
+
+delta_3
+```
+El error en la última capa es `r delta_3`.
+
+8. Ahora calcula (ver algoritmo de backpropagation) la derivada $\frac{\partial D}{\partial \theta^{(2)}_{1,1}}$. El resultado coincide con tu intuición del inciso 4? Puedes intentar calcular directamente esta derivada también, con el método que quieras.
+
+Calculamos la parcial usando el $\frac{\partial D}{\partial \theta_{j,k}^{(l)}}=\delta_j^{(l+1)}\cdot  a_k^{(l)}$ entonces $\frac{\partial D}{\partial \theta_{1,1}^{(2)}}=\delta_1^{(3)}\cdot  a_1^{(2)}$
+
+```{r}
+h_deriv <- function(x,beta){
+  aux <- hfun(x,beta)
+  aux*(1-aux)
+}
+
+partial_theta_2_1_1 <- delta_3*a1
+partial_theta_2_1_1
+```
+```{r}
+h <- 1.e-8
+
+a1      <- hfun(x, c(0,0.2))
+a2      <- hfun(x, c(0, -0.3))
+p_est   <- hfun(c(a1,a2),c(-0.5, -1, 2))
+p_est2  <- hfun(c(a1,a2), c(-0.5, -1+h, 2))
+dev1    <- -2*(p*log(p_est)+(1-p)*log(1-p_est))
+dev2    <- -2*(p*log(p_est2)+(1-p)*log(1-p_est2))
+
+num_partial_theta_2_1_1 <- (dev2-dev1)/h
+num_partial_theta_2_1_1
+```
+
+```{r}
+h <- 1.e-4
+
+a1     <- hfun(x, c(0,0.2))
+a2     <- hfun(x, c(0, -0.3))
+p_est  <- hfun(c(a1,a2),c(-0.5, -1, 2))
+p_est2 <- hfun(c(a1,a2), c(-0.5, -1, 2+h))
+dev1    <- -2*(p*log(p_est)+(1-p)*log(1-p_est))
+dev2    <- -2*(p*log(p_est2)+(1-p)*log(1-p_est2))
+num_partial_theta_2_1_2 <- (dev2-dev1)/h
+num_partial_theta_2_1_2
+```
+
+$\frac{\partial D}{\partial \theta^{(2)}_{1,1}}$ es mayor a uno y no coincide con lo esperado. 
+
+9. ¿Cómo se calculan las derivadas de los sesgos? Calcula $\frac{\partial D}{\partial \theta^{(2)}_{1,0}}$ usando 
+el inciso anterior. Ahora usamos  entonces $\frac{\partial D}{\partial \theta_{1,0}^{(2)}}=\delta_1^{(3)}\cdot  a_0^{(2)}$
+
+```{r}
+
+partial_theta_2_1_0 <- delta_3*1
+partial_theta_2_1_0
+```
+```{r}
+a1     <- hfun(x, c(0,0.2))
+a2     <- hfun(x, c(0, -0.3))
+p_est  <- hfun(c(a1,a2),c(-0.5, -1, 2))
+p_est2 <- hfun(c(a1,a2), c(-0.5+h, -1, 2))
+
+
+num_partial_theta_2_1_0 <- (p_est2-p_est)/h
+num_partial_theta_2_1_0
+
+```
+
+
+10. Paso de backpropagation (error en capa 2): Calcula $\delta^{(2)}_1=$ y $\delta^{(2)}_2$, según la fórmula que vimos en las notas
+(puedes usar la matricial o la coordenada a coordenada).
+```{r}
+delta_2_1 <- delta_3*(-1)*h_deriv(x,c(0,0.2))
+delta_2_2 <- delta_3*(2)*h_deriv(x,c(0,-0.3))
+
+c(delta_2_1=delta_2_1, delta_2_2=delta_2_2)
+
+```
+
+11. ¿Qué indican los valores de $\delta^{(2)}_1, \delta^{(2)}_2$? Compara con tu respuesta del inciso 5.
+Obtuve resultados opuestos a lo que hubiera esperado.
+
+12. Ahora utiliza $\delta^{(2)}$ para calcular  $\frac{\partial D}{\partial \theta_{1,0}^{(1)}}$, $\frac{\partial D}{\partial \theta_{1,1}^{(1)}}$, $\frac{\partial D}{\partial \theta_{2,0}^{(1)}}$ y $\frac{\partial D}{\partial \theta_{2,1}^{(1)}}$ . 
+```{r}
+partial_theta_1_1_0 <- delta_2_1*1
+partial_theta_1_1_1 <- delta_2_1*1
+partial_theta_1_1_1
+
+partial_theta_1_2_0 <- delta_2_2*1
+partial_theta_1_2_1 <- delta_2_2*1
+partial_theta_1_2_0
+
+```
+
+```{r}
+h <- 1.e-6
+a1     <- hfun(x, c(0,0.2))
+a1_h   <- hfun(x, c(0+h,0.2))
+a2     <- hfun(x, c(0, -0.3))
+p_est  <- hfun(c(a1,a2),c(-0.5, -1, 2))
+p_est2 <- hfun(c(a1_h,a2), c(-0.5, -1, 2))
+
+dev1    <- -2*(p*log(p_est)+(1-p)*log(1-p_est))
+dev2    <- -2*(p*log(p_est2)+(1-p)*log(1-p_est2))
+
+num_partial_theta_1_1_0 <- (dev2-dev)/h
+```
+
+```{r}
+a1     <- hfun(x, c(0,0.2))
+a1_h   <- hfun(x, c(0,0.2+h))
+a2     <- hfun(x, c(0, -0.3))
+p_est  <- hfun(c(a1,a2),c(-0.5, -1, 2))
+p_est2 <- hfun(c(a1_h,a2), c(-0.5, -1, 2))
+
+dev1    <- -2*(p*log(p_est)+(1-p)*log(1-p_est))
+dev2    <- -2*(p*log(p_est2)+(1-p)*log(1-p_est2))
+num_partial_theta_1_1_1 <- (dev2-dev1)/h
+```
+
+```{r}
+a1     <- hfun(x, c(0,0.2))
+a2     <- hfun(x, c(0, -0.3))
+a2_h   <- hfun(x, c(0+h, -0.3))
+p_est  <- hfun(c(a1,a2),c(-0.5, -1, 2))
+p_est2 <- hfun(c(a1,a2_h), c(-0.5, -1, 2))
+
+dev1    <- -2*(p*log(p_est)+(1-p)*log(1-p_est))
+dev2    <- -2*(p*log(p_est2)+(1-p)*log(1-p_est2))
+num_partial_theta_1_2_0 <- (dev2-dev1)/h
+```
+
+```{r}
+a1     <- hfun(x, c(0,0.2))
+a2     <- hfun(x, c(0, -0.3))
+a2_h   <- hfun(x, c(0, -0.3+h))
+p_est  <- hfun(c(a1,a2),c(-0.5, -1, 2))
+p_est2 <- hfun(c(a1,a2_h), c(-0.5, -1, 2))
+dev1    <- -2*(p*log(p_est)+(1-p)*log(1-p_est))
+dev2    <- -2*(p*log(p_est2)+(1-p)*log(1-p_est2))
+
+num_partial_theta_1_2_1 <- (dev2-dev1)/h
+```
+
+```{r}
+nums <- c(num_partial_theta_1_1_0, num_partial_theta_1_1_1, 
+          num_partial_theta_1_2_0, num_partial_theta_1_2_1)
+
+bp <- c(partial_theta_1_1_0, partial_theta_1_1_1,
+        partial_theta_1_2_0, partial_theta_1_2_1)
+
+rbind(nums,bp)
+```
+
+
+13. ¿Puedes explicar intuitivamente los signos que obtuviste para las derivadas del inciso anterior (tip: tienes qué ver también que sucede en la siguiente capa)?
+Intuitivamente obtengo lo contrario de lo que hubiera esperado, supongo que algo tengo mal.

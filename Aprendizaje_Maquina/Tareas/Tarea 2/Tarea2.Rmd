@@ -1,0 +1,155 @@
+---
+title: "Tarea 2+"
+author: "Dalia Camacho"
+date: "August 22, 2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+set.seed(876544)
+```
+
+Para este ejemplo usaremos los datos de https://archive.ics.uci.edu/ml/machine-learning-databases/housing/. El objetivo es predecir el valor mediano de las viviendas en áreas del censo de Estados Unidos, utilizando variables relacionadas con criminalidad, ambiente, tipo de viviendas, etc.
+
+
+```{r}
+housing <- read.csv("/home/dalia/Dropbox/ITAM_MCC/Semestre_1/Aprendizaje de maquina/Tareas/Tarea 2/housing_data.csv", header = FALSE)[,2:15]
+
+names(housing) <- c("CRIM", "ZN", "INDUS", "CHAS", "NOX",
+                    "RM", "AGE", "DIS", "RAD", "TAX", "PTRATIO",
+                    "B", "LSTAT", "MEDV")
+
+housing <- housing[complete.cases(housing$MEDV),]
+```
+
+## Separa la muestra en dos partes: unos 400 para entrenamiento y el resto para prueba.
+
+```{r}
+entrena      <- sample(1:nrow(housing),400)
+Base_entrena <- housing[entrena,]
+Base_prueba  <- housing[-entrena,]
+```
+
+##Describe las variables en la muestra de prueba (rango, media, mediana, por ejemplo).
+
+```{r}
+# Promedio
+Prom <- colMeans(Base_prueba)
+
+# Mínimo
+Min <- unlist(lapply(1:14, function(i){min(Base_prueba[,i])}))
+
+# Máxiimo
+Max <- unlist(lapply(1:14, function(i){max(Base_prueba[,i])}))
+
+# Mediana
+Mediana <- unlist(lapply(1:14, function(i){median(Base_prueba[,i])}))
+
+# Tabla Resumen
+
+matrix(c("Variable",c("CRIM", "ZN", "INDUS", "CHAS",
+                      "NOX", "RM", "AGE", "DIS", "RAD",
+                      "TAX", "PTRATIO", "B", "LSTAT", "MEDV"),
+         "Promedio", Prom, "Mediana",  Mediana, 
+         "Mínimo", Min, "Máximo", Max), byrow = FALSE, ncol = 5)
+
+```
+
+##Construye un modelo lineal para predecir MEDV en términos de las otras variables. Utiliza descenso en gradiente para estimar los coeficientes con los predictores estandarizados.
+
+
+```{r}
+#Estandarizar
+std_entrena <- data.frame(matrix(unlist(lapply(1:14, function(i){(Base_entrena[,i]-mean(Base_entrena[,i]))/sd(Base_entrena[,i])})),ncol = 14))
+
+names(std_entrena) <- c("CRIM", "ZN", "INDUS", "CHAS", "NOX", "RM", "AGE", "DIS", "RAD", "TAX", "PTRATIO", "B", "LSTAT", "MEDV")
+
+```
+
+```{r}
+X       <- as.matrix(cbind(rep(1,400), std_entrena[,1:13]))
+Y       <- as.matrix(std_entrena[,14])
+RSS     <- function(beta){
+  1/2*sum((Y-X%*%beta)^2)
+}
+
+gradRSS  <- function(beta){
+  t(X)%*%(X%*%beta-Y)
+}
+```
+
+```{r}
+OptimBeta <- function(fun, grad, X, Y, beta, eta, maxiter, tol, fprint=FALSE){
+  iter    <- 0
+  toler   <- Inf
+  funval  <- Inf 
+  while (iter<maxiter & toler > tol ) {
+    beta0     <- beta
+    funvalNew <- eval(fun(beta))
+    beta      <- beta - eta*eval(grad(beta))
+    toler     <- abs(funvalNew-funval)
+    funval    <- funvalNew
+    if(fprint){print(paste("Value of function",funval))}
+    iter      <- iter+1
+  }
+  if(iter==maxiter){
+    flag <- "Did not converge"
+  }else{
+    flag <- paste("Converged in", iter, "steps")
+  }
+  
+  return(list("Value" = funval, "Beta" = beta, "Flag"=flag))
+}
+```
+
+```{r}
+# Get optimized beta
+beta     <- rep(0,14)
+eta      <- 6.e-5
+maxiter  <- 2000
+tol      <- 1e-6
+
+sol <- OptimBeta(fun = RSS, grad = gradRSS, X=X, Y=Y, beta=beta, eta = eta, maxiter = maxiter, tol = tol, fprint = FALSE)
+```
+##Verifica tus resultados con la función lm.
+
+```{r}
+lmHousing <- lm(MEDV~.,data = std_entrena)
+
+Diferencia <- formatC(t(lmHousing$coefficients-sol[[2]]), digits = 4,format = "f")
+print(Diferencia)
+
+ggplot()+
+  geom_point(aes(lmHousing$coefficients,sol[[2]]))+
+  geom_line(aes(seq(-.5,.5, length.out = 100),seq(-.5,.5, length.out = 100)))+
+  theme_bw()+
+  xlab("Lm")+ylab("Gradiente")+
+  ggtitle("Comparar coeficientes de modelo lm contra descenso de gradiente")
+
+```
+
+##Evalúa el error de entrenamiento y evalúa después la estimación del error de predicción   Utiliza la raíz del la media de los errores al cuadrado.
+
+
+```{r}
+# Desestandarizar coeficientes de beta 
+
+Beta <- c(sol[[2]][1]+sum(unlist(lapply(1:13, function(i){mean(Base_entrena[,i])/sd(Base_entrena[,i])}))),
+          unlist(lapply(1:13, function(i){sol[[2]][i]/sd(Base_entrena[,i])})))
+
+Error_entrena <- sqrt(mean((as.matrix(cbind(rep(1,400), Base_entrena[,1:13]))%*%Beta-
+  Base_entrena$MEDV)^2))
+
+Error_prueba <-  sqrt(mean((as.matrix(cbind(rep(1,nrow(Base_prueba)),
+                                           Base_prueba[,1:13]))%*%Beta-
+  Base_prueba$MEDV)^2))
+
+Error_entrena
+
+Error_prueba
+
+```

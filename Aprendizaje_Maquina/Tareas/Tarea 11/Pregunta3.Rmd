@@ -1,0 +1,188 @@
+---
+title: "Pregunta 3"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### 3. MCMC {-}
+
+Siguiendo con el conteo rápido de Guanajuato, calcularás intervalos de confianza
+usando el modelo propuesto en @mendoza2016.
+
+Los autores proponen ajustar un modelo de manera independiente para cada 
+candidato en cada estrato:
+
+* Verosimilitud
+
+$$X_{ij}^k\big|\theta_{ij},\tau_{ij}\sim N\bigg(n_i^k\theta_{ij}, \frac{\tau_{ij}}{n_i^k}\bigg)$$
+
+para $k=1,...,c_i$, $i = 1,...,N$, $j=1,...,J$
+
+* Iniciales
+
+$$p(\theta_{i,j},\tau_{ij})\propto \tau_{ij}^{-1}I(\tau_{ij}>0)I(0<\theta_{i,j}<1)$$
+
+* Posterior
+
+$$p(\theta_{ij}, \tau_{ij}|X_{ij}) \sim N\bigg(\theta_{ij} \bigg| \frac{\sum_{k=1}^{c_i}x_{ij}^k}{\sum_{k=1}^{c_i}n_{i}^k}, \tau_{ij}\sum_{k=1}^{c_i}n_i^k\bigg)I(0<\theta_{ij}<1)\times Ga\bigg(\tau_{ij}\bigg|\frac{c_i-1}{2}, \frac{1}{2}\bigg[\sum_{k=1}^{c_i}\frac{(x_{ij}^k)^2}{n_i^k}-\frac{\big(\sum_{k=1}^{c_i}x_{ij}^k\big)^2}{\sum_{k=1}^{c_i}n_i^k}\bigg]\bigg)$$
+donde:
+
+* $X_{ij}$ número de personas que favorecen al candidato $j$ en el estrato $i$.
+
+* $X_{ij}^k$ número de personas que favorecen al candidato $j$ en la casilla $k$ 
+del estrato $i$.
+
+* $n_i^k$ tamaño de la lista nominal en la $k$-ésima casilla del $i$-ésimo 
+estrato.
+
+* $\tau_{ij}/n_i^{k}$ es la precisión para cada candidato.
+
+* $\theta_{ij}$ es la proporción de las personas en la lista nominal del estrato
+$i$ que favorecen al $j$-ésimo partido.
+
+* $c_i$ número de casillas del $i$-ésimo estrato en la muestra.
+
+Los detalles del modelo los puedes encontrar en el [artículo](https://drive.google.com/open?id=1lI5lUSqNcIYvlvxRyrbBD_IrzlWIzILY).
+
+Implementa el modelo y estima los resultados electorales de Guanajuato con la 
+muestra:
+
+```{r, message=FALSE}
+library(tidyverse)
+gto_muestra <- read.csv("data/muestra_gto_2012_2.csv", stringsAsFactors = FALSE)
+
+# Eliminamos el estrato con una sola casilla para evitar que la posterior sea impropia
+gto_muestra  <- gto_muestra %>% filter(distrito_fed_17!=20)
+```
+
+```{r}
+# Obtener nik
+nik <- gto_muestra %>% group_by(casilla_id, distrito_fed_17) %>% 
+  summarise("nik"=sum(ln_total))
+nik <- nik %>% ungroup() %>% 
+  mutate("casilla_id"=as.numeric(as.factor(casilla_id))) %>% 
+  mutate("distrito_fed_17"=as.numeric(as.factor(distrito_fed_17)))
+
+nik <- nik %>% spread(key =casilla_id, value = nik, fill = 0) %>%  select(-"distrito_fed_17") %>% as.matrix()
+```
+
+
+```{r}
+gto_muestraVotos <- gto_muestra %>%  gather(key="partido", value = "votos",
+                                            pri_pvem, pan_na, prd, pt, mc, otros)
+# Número de estratos
+Ni <- length(unique(gto_muestra$distrito_fed_17))
+
+# Número de candidatos
+Nj <- length(unique(gto_muestraVotos$partido))
+
+# Número de casillas
+Nk <- length(unique(gto_muestraVotos$casilla_id))
+
+# Número de casillas por estrato
+ci <- gto_muestra %>% group_by(distrito_fed_17) %>% summarise("ci"=n()) %>% 
+  select("ci") %>% unlist()
+```
+
+```{r}
+# Datos observados
+Xijk <-  gto_muestraVotos %>% group_by(partido, distrito_fed_17, casilla_id) %>% 
+  summarise("Xijk"=sum(votos)) %>% 
+  ungroup() %>% 
+  mutate("partido"=as.numeric(as.factor(partido))) %>% 
+  mutate("casilla_id"=as.numeric(as.factor(casilla_id))) %>% 
+  mutate("distrito_fed_17"=as.numeric(as.factor(distrito_fed_17)))
+
+
+num_votos_estrato <- gto_muestraVotos %>% group_by(distrito_fed_17) %>% 
+  summarise(total= sum(total)) %>% ungroup() %>% 
+  select(-"distrito_fed_17") %>% as.matrix()
+
+
+
+
+```
+
+
+```{r}
+# Posterior 
+# Theta[1]: thetaij
+# Theta[2]: tauij
+postRelProb <- function(i,j, nik, Xijk){
+  function(Theta){
+    thetaij <- Theta[1]
+    tauij   <- Theta[2]
+    if(thetaij >0 & thetaij<1){
+      # Vector de Xs para estrato i y candidato j
+      Xs   <- Xijk %>% filter(distrito_fed_17==i & partido==j) %>% select("Xijk") %>%  unlist()
+      
+      # Vector de tamaño de la lista nominal en la casilla k
+      ns   <- nik[i,]
+      ns   <- ns[which(ns>0)]
+      ci   <- length(ns)
+      # Precalcular sumas de la distribución
+      sum1 <- sum(Xs)/sum(ns)
+      sum2 <- sum(ns)
+      sum3 <- sum(Xs^2/ns)
+      sum4 <- sum(Xs)^2/sum(ns)
+      
+      # Calcular probabilidad de thetaij
+      p_thetaij <- dnorm(thetaij, sum1, 1/sqrt(tauij*sum2))
+      # Calcular probabilidad de tauij
+      p_tauij    <- dgamma(tauij, (ci-1)/2, 0.5*(sum3-sum4))
+      # Calcular probabilidad conjunta de thetaij y tauij
+      prob       <- p_thetaij * p_tauij
+      return(prob)
+    }
+    else{
+      return(0)
+    }
+  }
+}
+```
+
+
+
+```{r}
+
+# para cada paso decidimos el movimiento de acuerdo a la siguiente función
+caminaAleat <- function(theta){ # theta: valor actual
+  salto_prop <- MASS::mvrnorm(n = 1 , mu = rep(0, 2), 
+                              Sigma = matrix(c(0.005, 0, 0, 0.005), byrow = TRUE, nrow = 2)) # salto propuesto
+  theta_prop <- theta + salto_prop # theta propuesta
+  if(theta_prop[1]< 0 | theta_prop[1] > 1 | theta_prop[2]<0){ # si el salto implica salir del dominio
+    return(theta)
+  }
+  u <- runif(1) 
+  p_move <-  min(postRelProb_ij(theta_prop) / postRelProb_ij(theta), 1) # prob mover
+  if(p_move  > u){
+    return(theta_prop) # aceptar valor propuesto
+  }
+  else{
+    return(theta) # rechazar
+  }
+}
+```
+
+
+
+```{r}
+set.seed(47405)
+MCMC_ij <- function(i,j, theta0, pasos, calentamiento){
+  postRelProb_ij <- postRelProb(i, j, nik, Xijk)
+  camino         <- array(dim=c(pasos,2)) # vector que guardará las simulaciones
+  camino[1,]     <- theta0 # valor inicial
+  
+  # Generamos la caminata aleatoria
+  for (j in 2:pasos){
+    camino[j,] <- caminaAleat(camino[j - 1,])
+  }
+  
+  caminata <- data.frame(pasos = 1:(pasos-calentamiento), theta = camino[(calentamiento+1):pasos,])
+  return(caminata)
+}
+
+```

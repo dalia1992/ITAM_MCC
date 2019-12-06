@@ -1,0 +1,156 @@
+---
+title: "Arboles y Bosques. Ingreso de los hogares"
+output: html_notebook
+---
+
+Este es el código para preparar los datos, donde tomamos unas cuantas
+variables de la encuesta [Enigh 2016](http://www.beta.inegi.org.mx/proyectos/enchogares/regulares/enigh/nc/2016/default.html).
+**En este caso ignoraremos el hecho de que estos datos resultan de un diseño
+complejo de muestra**. En este caso, convendría diseñar un esquema de validación 
+apropiado (extrayendo unidades primarias de muestreo completas, por ejemplo), y
+usar los factores de expansión de la muestra.
+
+```{r}
+library(readr)
+library(dplyr)
+library(knitr)
+concentrado <- read_csv('concentradohogar.csv')
+hogares <- read_csv('hogares.csv')
+problems(concentrado)
+head(concentrado)
+names(concentrado)
+concen_2 <- left_join(concentrado, hogares)
+names(concen_2)[1] <- "folioviv"
+datos <- concen_2 %>% select(folioviv, foliohog, tam_loc, educa_jefe, 
+                             celular, tv_paga, conex_inte, num_auto, num_tosta, num_lavad,
+                             num_compu, ing_cor, factor) %>%
+  mutate(tam_loc = recode(tam_loc, `1`='100 mil+',`2`='15mil-100mil',
+                          `3`='2.5mil-15mil',`4`='Menos de 2.5 mil')) %>%
+  mutate(celular = recode(celular, `1`='Si', `2`='No')) %>%
+  mutate(tv_paga = recode(tv_paga, `1`='Si', `2`='No')) %>%
+  mutate(celular = recode(celular, `1`='Si', `2`='No')) %>%
+  mutate(conex_inte = recode(conex_inte, `1`='Si', `2`='No')) 
+
+#write_csv(datos, path ='vars_enigh_2016.csv')            
+```
+
+### Datos
+
+Buscamos predecir el ingreso corriente trimestral 
+de los hogares a partir de algunas de sus
+características, el tamaño de la localidad, y la educación del jefe(a) del hogar.
+Para este ejemplo usamos una muestra:
+
+```{r}
+set.seed(293)
+datos <- read_csv(file = 'vars_enigh_2016.csv')
+datos <- sample_n(datos, 10000)
+```
+
+Vamos a predecir el log del ingreso. En la escala logarítmica, los
+cuantiles de ingreso son:
+
+```{r}
+datos$ingreso_log <- log(1 + datos$ing_cor)
+#escala log
+quantile(datos$ingreso_log, probs = seq(0,1,0.1))
+
+```
+
+Y en la escala original (recuerda que es ingreso **trimestral**):
+
+```{r}
+#escala original
+exp(quantile(datos$ingreso_log, probs = seq(0,1,0.1)))
+```
+
+### Árboles
+
+Corre el siguiente código
+
+```{r}
+library(rpart)
+library(rpart.plot)
+
+arbol_grande <- rpart(ingreso_log ~ tam_loc + educa_jefe + 
+                        celular+ conex_inte + num_auto+ num_tosta+ num_lavad+ num_compu + factor, 
+                      data= datos, cp=0)
+prp(prune(arbol_grande, cp=0.004), type=4, extra=1, digits=3)
+```
+
+1. ¿Qué significa la información que hay en cada nodo? Nota: puedes interpretar diferencias
+de log ingreso rápidamente si tomas en cuenta que una diferencia en la escala logarítmica
+(para diferencias más chicas) es aproximadamente cambio porcentual en ingreso. Por ejemplo
+la diferencia de ingreso en escala log de 4.7 a 4.9 es aproximadamente un incremento
+de 20\%. 
+
+Los nodos contienen el valor promedio de ingreso en escala log y el número de hogares que se encuentran en cada nodo.
+En el nodo inicial se tiene como valor predictivo 10.3, que sería el valor que obtendríamos en escala log del ingreso si no contaramos con información adicional, a partir de ahí, la variable conexión a internet divide en dos grupos, si cuentan con conexión el ingreso trimestral promedio es de  \$54176.36, mientras que si no se tiene conexión a internet el salario promedio es \$24343.01, menos de la mitad del otro grupo. El grupo sin conexión a internet se subdivide dependiendo de si se tiene celular, mientras que en el grupo con conexión a internet se hace una nueva separación dependiendo del la educación del jefe de familia. Se puede seguir la subdivisión hasta que se tienen 13 nodos finales. Por ejemplo el sexto nodo da un ingreso en escala log de 10.6 que corresponde a un hogar sin conexión a internet, tienen celular, no tienen autos, tienen al menos una lavadora y al menos una computadora, hay 246 hogares con estas características. El nodo 9 tiene el mismo ingreso de 10.6, y es un hogar con conexión a internet, donde el jefe de familia tiene educación menor al nivel 10 y no tienen auto, hay 1234 hogares con estas características. 
+
+2. Poda el árbol para mostrar solamente un árbol con 5 nodos terminales. ¿Qué variables son usadas? Evalúa el  error de entrenamiento para este árbol. 
+
+```{r}
+arbol_5_nodos <- prune(arbol_grande, cp=0.025)
+
+prp(prune(arbol_grande, cp=0.025), type=4, extra=1, digits=3)
+
+```
+Con un parámetro de complejidad de 0.025, el árbol podado tiene 5 nodos terminales. Las variables usadas son conexión a internet, uso de celular, educación del jefe de familia y número de autos.
+
+```{r}
+Pred_ent <- predict(arbol_5_nodos)
+mean((datos$ingreso_log - Pred_ent)^2)
+```
+El error como $\frac{1}{N}\sum (y_i-\hat{y_i})^2$ da un error de 0.42.
+
+### Bosques aleatorios
+
+1. Usa un bosque aleatorio para predecir el log ingreso. Prueba algunos valores
+de $m$ (mtry) y escoge un modelo final usando el error out-of-bag. Grafica
+cómo evoluciona la estimación OOB del error conforme aumenta el número de árboles.
+
+
+Usamos la librería randomForest
+
+```{r}
+library(randomForest)
+set.seed(1832)
+```
+
+```{r}
+library(tidyr)
+#utiliza estos datos, que tienen las variables categóricas convertidas a factores.
+datos_df <- data.frame(unclass(datos))
+datos_df <- datos_df %>% select(-c("folioviv", "foliohog","ing_cor", "factor"))
+
+```
+
+
+Probamos con 20 árboles y $m=1$.
+
+```{r}
+MSEs <- c()
+for(i in 1:6){
+  rF1  <- randomForest(formula = (ingreso_log) ~.,
+                      data = datos_df, ntree = 50, mtry = i, importance = TRUE) 
+  MSEs <- c(MSEs, mean(rF1$mse))
+}
+
+matrix(c(1:6,MSEs),ncol=2)
+```
+Usamos $m=2$ para probar el MSE.
+
+```{r}
+MSEs2 <- c()
+for(i in 10:1000){
+   rF1  <- randomForest(formula = (ingreso_log) ~.,
+                      data = datos_df, ntree = i, mtry = 2, importance = TRUE) 
+  MSEs2 <- c(MSEs2, mean(rF1$mse))
+}
+```
+
+
+2. Examina las importancias de las variables. ¿Cuáles son las 2 variables más importantes? 
+
+3. (Opcional) Incluye una o dos variables adicionales que crees que puedan tener importancia alta. ¿En qué lugar aparecen?
+

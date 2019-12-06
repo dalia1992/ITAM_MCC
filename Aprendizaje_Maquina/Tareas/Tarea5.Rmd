@@ -1,0 +1,259 @@
+---
+title: "Tarea 5"
+author: "Dalia Camacho"
+date: "September 16, 2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Ejercicio 1
+En la Tarea 4, construye curvas ROC para cada uno de los tres modelos (una sola variable, todas las variables, y todas las variables más variables de ruido). 
+
+```{r}
+# Volver a correr tarea 4
+source("Tarea4/tarea_4_codigo.R")
+suppressMessages(library(tidyverse))
+datos_titanic <- read_csv("Tarea4/tarea_4_datos/train.csv")
+
+# Modificar bases
+datos_titanic <- datos_titanic %>% select(Survived, Pclass, Age, Sex, Embarked) %>%
+  filter(!is.na(Age), !is.na(Embarked))
+summary(datos_titanic)
+
+datos <- datos_titanic %>% 
+  mutate(female = as.numeric(Sex == "female"),
+         southampton = as.numeric(Embarked == "S"),
+         cherbourg = as.numeric(Embarked == "C")) %>%
+  select(-Embarked, -Sex)
+
+
+datos$age_n <- datos$Age / 60
+datos$pclass_n <-(datos$Pclass - 1) / 3
+datos_trans <- datos %>% select(Survived, pclass_n, age_n, female, southampton, cherbourg)
+
+set.seed(2850)
+datos_trans <- datos_trans %>% 
+  mutate(u = runif(nrow(datos_trans))) 
+entrena <- datos_trans %>% filter(u <= 0.7) %>% select(-u)
+prueba <- datos_trans %>% filter(u > 0.7) %>% select(-u)
+
+x_ent <- as.matrix(entrena %>% select(-Survived))
+x_pr <- as.matrix(prueba %>% select(-Survived))
+y_ent <- entrena$Survived
+y_pr <- prueba$Survived
+
+# Estimación una sola variable
+x_ent_1 <- x_ent[ , "cherbourg", drop = FALSE] # drop=false es para no convertir en vector
+devianza_ent <- devianza_calc(x_ent_1, y_ent)
+grad_ent <- grad_calc(x_ent_1, y_ent)
+## termina esta línea para descenso en gradiente
+```
+
+Generar probabilidades para los tres modelos
+```{r}
+# Una sola variable (Cherbourg)
+n     <- 10000
+z     <- descenso(n = n, z_0 = rep(0, 2), eta = 0.0001, h_deriv = grad_ent)
+beta  <- z[n,]
+prueba$Prob_mod_cher <- h(cbind(rep(1, nrow(prueba)),
+                              prueba$cherbourg)%*%beta)
+```
+
+Para todas las variables
+```{r}
+devianza_ent <- devianza_calc(x_ent, y_ent)
+grad_ent     <- grad_calc(x_ent, y_ent)
+z            <- descenso(n = n, z_0 = rep(0, 6),
+                         eta = 0.0001, h_deriv = grad_ent)
+beta2       <- z[n,]
+prueba$Prob_mod_all <- h(cbind(rep(1, nrow(prueba)),
+                              x_pr)%*%beta2)
+```
+
+Para variables con ruido 
+```{r}
+p_ruido <- 50 # agregamos 50 variables sin información
+n_ent   <- nrow(x_ent)
+n_pr    <- nrow(x_pr)
+mat_ent <- matrix(runif(n_ent * p_ruido), n_ent, p_ruido)
+mat_pr  <- matrix(runif(n_pr * p_ruido), n_pr, p_ruido)
+
+devianza_ent <- devianza_calc(cbind(x_ent, mat_ent), y_ent)
+grad_ent <- grad_calc(cbind(x_ent, mat_ent), y_ent)
+## termina esta línea
+z     <- descenso(n = n, z_0 = rep(0,56), eta = 0.0001, h_deriv = grad_ent)
+beta3 <- z[n,]
+prueba$Prob_mod_ruido <- h(cbind(rep(1, nrow(prueba)),x_pr, mat_pr)%*%beta3)
+``` 
+
+Generar curvas ROC
+
+```{r}
+library(ROCR)
+# Cherbourg
+pred_rocr1 <- prediction(prueba$Prob_mod_cher, prueba$Survived) 
+perf1      <- performance(pred_rocr1, measure = "sens", x.measure = "fpr") 
+graf_roc_1 <- data_frame(tfp = perf1@x.values[[1]], sens = perf1@y.values[[1]], 
+                       d = perf1@alpha.values[[1]])
+
+g1 <- ggplot(graf_roc_1, aes(x = tfp, y = sens, colour=d)) + geom_point() + geom_line()+
+  xlab('1-especificidad') + ylab('Sensibilidad') 
+
+# Todas las variables
+pred_rocr2 <- prediction(prueba$Prob_mod_all, prueba$Survived) 
+perf2      <- performance(pred_rocr2, measure = "sens", x.measure = "fpr") 
+graf_roc_2 <- data_frame(tfp = perf2@x.values[[1]], sens = perf2@y.values[[1]], 
+                       d = perf2@alpha.values[[1]])
+
+g2 <- ggplot(graf_roc_2, aes(x = tfp, y = sens, colour=d)) + geom_point() + geom_line()+
+  xlab('1-especificidad') + ylab('Sensibilidad') 
+
+# Todas las variables más ruido
+pred_rocr3 <- prediction(prueba$Prob_mod_ruido, prueba$Survived) 
+perf3      <- performance(pred_rocr3, measure = "sens", x.measure = "fpr") 
+graf_roc_3 <- data_frame(tfp = perf3@x.values[[1]], sens = perf3@y.values[[1]], 
+                       d = perf3@alpha.values[[1]])
+
+ggplot()+
+  geom_point(aes(graf_roc_1$tfp, graf_roc_1$sens, colour="Cherbourg"))+
+  geom_line(aes(graf_roc_1$tfp, graf_roc_1$sens, colour="Cherbourg"))+
+  
+  geom_point(aes(graf_roc_2$tfp, graf_roc_2$sens, colour="Todas"))+
+  geom_line(aes(graf_roc_2$tfp, graf_roc_2$sens, colour="Todas"))+
+  
+  geom_point(aes(graf_roc_3$tfp, graf_roc_3$sens, colour="Ruido"))+
+  geom_line(aes(graf_roc_3$tfp, graf_roc_3$sens, colour="Ruido"))+
+  
+  xlab('1-especificidad') + ylab('Sensibilidad') 
+
+```
+
+####¿Cuál tiene mejor desempeño? 
+La curva con todas las variables sin ruido parece ser la que tiene mejor desempeño en la mayoría de los casos
+
+####Calcula el AUC para cada una de las tres curvas.
+
+```{r}
+#Cherbourg
+auc_1 <- performance(pred_rocr1, measure = 'auc')@y.values
+auc_1[[1]]
+
+
+#Todas
+auc_2 <- performance(pred_rocr2, measure = 'auc')@y.values
+auc_2[[1]]
+
+
+#Todas con ruido
+auc_3 <- performance(pred_rocr3, measure = 'auc')@y.values
+auc_3[[1]]
+
+```
+El modelo con mejor desempeño en términos de AUC es el modelo con todas las variables sin ruido.
+
+ 
+### Ejercicio 2 
+Para el ejemplo de regresión logística multinomial que vimos en clase (clasificación de dígitos 0-9), construye la gráfica de coeficientes (sección 4.3.3) para:
+
+####a)
++El modelo que vimos en clase donde no habían convergido los coeficientes
+
+
+```{r}
+digitos_entrena <- read_csv('digitos/zip-train.csv')
+digitos_prueba  <- read_csv('digitos/zip-test.csv')
+
+names(digitos_entrena)[1] <- 'digito'
+names(digitos_entrena)[2:257] <- paste0('pixel_', 1:256)
+names(digitos_prueba)[1] <- 'digito'
+names(digitos_prueba)[2:257] <- paste0('pixel_', 1:256)
+```
+```{r}
+library(nnet)
+mod_mult <- multinom(digito ~ ., data = digitos_entrena, MaxNWt=100000, maxit = 20)
+```
+
+```{r}
+coefs <- coef(mod_mult)
+coefs_reng <- coefs[1, , drop =FALSE]
+coefs <- rbind(coefs_reng, coefs)
+coefs[1 , ] <- 0
+```
+
+```{r}
+beta_df <- coefs[,-1] %>% as.data.frame %>% 
+  mutate(digito = 0:(nrow(coefs)-1)) %>%
+  gather(pixel, valor, contains('pixel')) %>%
+  separate(pixel, into = c('str','pixel_no'), sep='_') %>%
+  mutate(x = (as.integer(pixel_no)-1) %% 16, y = -((as.integer(pixel_no)-1) %/% 16))
+
+```
+
+```{r}
+tab_coef <- beta_df %>% select(digito, x, y, valor)
+tab_coef_1 <- tab_coef
+names(tab_coef_1) <- c('digito_1','x','y','valor_1')
+tab_cruzada <- full_join(tab_coef_1, tab_coef) %>% mutate(dif = valor_1 - valor)
+
+```
+
+```{r}
+tab_cruzada <- tab_cruzada %>% group_by(digito, digito_1) %>% 
+  mutate(dif_s = (dif - mean(dif))/sd(dif)) %>%
+  mutate(dif_p = pmin(pmax(dif_s, -2), 2))
+```
+
+```{r}
+ggplot(tab_cruzada, aes(x=x, y=y)) + geom_tile(aes(fill = dif_p)) + 
+  facet_grid(digito_1~digito) + scale_fill_distiller(palette = "Spectral")
+```
+
+En el modelo que llega a converger se ve el sobre ajuste, ya que no es distinguible a qué dígito corresponden los pixeles en la muestra de prueba.
+
+####b)
++El modelo después de correr hasta convergencia (usa la función multinom)
+Compara las gráficas. ¿Cuál es más interpretable? ¿Puedes ver el sobreajuste del segundo modelo en estas gráficas?
+```{r}
+library(nnet)
+mod_mult2 <- multinom(digito ~ ., data = digitos_entrena, MaxNWt=100000, maxit = 500)
+```
+
+```{r}
+coefs2 <- coef(mod_mult2)
+coefs_reng2 <- coefs2[1, , drop =FALSE]
+coefs2 <- rbind(coefs_reng2, coefs2)
+coefs2[1 , ] <- 0
+```
+
+```{r}
+beta_df2 <- coefs2[,-1] %>% as.data.frame %>% 
+  mutate(digito = 0:(nrow(coefs2)-1)) %>%
+  gather(pixel, valor, contains('pixel')) %>%
+  separate(pixel, into = c('str','pixel_no'), sep='_') %>%
+  mutate(x = (as.integer(pixel_no)-1) %% 16, y = -((as.integer(pixel_no)-1) %/% 16))
+
+```
+
+```{r}
+tab_coef2 <- beta_df2 %>% select(digito, x, y, valor)
+tab_coef_12 <- tab_coef2
+names(tab_coef_12) <- c('digito_1','x','y','valor_1')
+tab_cruzada2 <- full_join(tab_coef_12, tab_coef2) %>% mutate(dif = valor_1 - valor)
+
+```
+
+```{r}
+tab_cruzada2 <- tab_cruzada2 %>% group_by(digito, digito_1) %>% 
+  mutate(dif_s = (dif - mean(dif))/sd(dif)) %>%
+  mutate(dif_p = pmin(pmax(dif_s, -2), 2))
+```
+
+```{r}
+ggplot(tab_cruzada2, aes(x=x, y=y)) + geom_tile(aes(fill = dif_p)) + 
+  facet_grid(digito_1~digito) + scale_fill_distiller(palette = "Spectral")
+```
+
+En el modelo que llega a converger se ve el sobre ajuste, ya que no es distinguible a qué dígito corresponden los pixeles en la muestra de prueba.

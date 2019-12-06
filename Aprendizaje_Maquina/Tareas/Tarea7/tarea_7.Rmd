@@ -1,0 +1,214 @@
+---
+title: "Tarea 7"
+output: html_notebook
+---
+
+## Parte 1
+
+Resuelve el ejercicio 7.1.0.1 de las notas (sigue el ejemplo anterior a este ejercicio). Puedes utilizar nnet o el código con el que optimizamos en clase.
+
+Este es el código para generar
+los datos:
+
+```{r}
+library(tidyverse)
+library(nnet)
+h <- function(x){
+  exp(x)/(1 + exp(x))
+}
+x <- seq(-2,2,0.05)
+p <- h(3 + x- 3 * x ^ 2 + 3 * cos(4 * x))
+set.seed(280572)
+x.2 <- runif(300, -2, 2)
+g.2 <- rbinom(300, 1, h(3 + x.2 - 3 * x.2 ^ 2 + 3 * cos(4 * x.2)))
+datos <- data.frame(x.2,g.2)
+dat.p <- data.frame(x,p)
+g <- qplot(x,p, geom='line', col='red')
+g + geom_jitter(data = datos, aes(x=x.2,y=g.2), col ='black',
+                position =position_jitter(height=0.05), alpha=0.4)
+```
+```{r}
+# Tomamos dos neuronas en la capa oculta
+nn     <- nnet(g.2~x.2, size=2, decay=0.001)
+p.pred <- predict(nn, newdata=data.frame(x.2 = x))
+neuronas2 <-mean((p-p.pred)^2)
+
+ggplot()+theme_bw()+
+  geom_line(aes(x, predict(nn, newdata=data.frame(x.2 = x))))+
+  xlab("x")+
+  geom_line( aes(x = x, y = p), col='red') +ylim(c(0,1))+
+  geom_point(data = datos, aes(x = x.2, y = g.2))+
+  ylab("")
+
+
+```
+```{r}
+# Tomamos tres neuronas en la capa oculta
+nn     <-  nnet(g.2~x.2, size=3, decay=0.001)
+p.pred <- predict(nn, newdata=data.frame(x.2 = x))
+neuronas3 <- mean((p-p.pred)^2)
+
+ggplot()+theme_bw()+
+  geom_line(aes(x, predict(nn, newdata=data.frame(x.2 = x))))+
+  xlab("x")+
+  geom_line( aes(x = x, y = p), col='red') +ylim(c(0,1))+
+  geom_point(data = datos, aes(x = x.2, y = g.2))+
+  ylab("")
+
+
+```
+
+```{r}
+# Tomamos 4 neuronas en la capa oculta
+nn     <- nnet(g.2~x.2, size=4, decay=0.001)
+p.pred <- predict(nn, newdata=data.frame(x.2 = x))
+neuronas4 <- mean((p-p.pred)^2)
+
+ggplot()+theme_bw()+
+  geom_line(aes(x, predict(nn, newdata=data.frame(x.2 = x))))+
+  xlab("x")+
+  geom_line( aes(x = x, y = p), col='red') +ylim(c(0,1))+
+  geom_point(data = datos, aes(x = x.2, y = g.2))+
+  ylab("")
+
+
+```
+```{r}
+# Tomamos 5 neuronas en la capa oculta
+nn     <- nnet(g.2~x.2, size=5, decay=0.001)
+p.pred <- predict(nn, newdata=data.frame(x.2 = x))
+neuronas5 <- mean((p-p.pred)^2)
+
+ggplot()+theme_bw()+
+  geom_line(aes(x, predict(nn, newdata=data.frame(x.2 = x))))+
+  xlab("x")+
+  geom_line( aes(x = x, y = p), col='red') +ylim(c(0,1))+
+  geom_point(data = datos, aes(x = x.2, y = g.2))+
+  ylab("")
+
+
+```
+
+```{r}
+c(neuronas2, neuronas3, neuronas4, neuronas5)
+```
+- ¿Qué tan bien puedes recuperar la forma verdadera (la función $p$, o la curva roja en la gráfica)? 
+
+No se logró capturar la curva inicial, la curva del centro se captura bastante bien, la curva final está, pero está desfasada.
+
+- ¿Cuántas variables derivadas $a_k$ utilizaste? Intenta usar el mínimo posible. Utilizando 4 variables $a_k$ se logra capturar lo anterior, al agregar una quinta variable $a_k$ la forma de la función no mejora y empieza a alejarse de la curva verdadera.
+
+- A grandes rasgos, ¿Puedes capturar todos los movimientos de la función verdadera $p$ con esta muestra de entrenamiento? Explica por qué si puedes o por qué no.
+
+No, por que no hay suficientes datos que logren jalar la primera curva hacia arriba.
+
+## Parte 2
+
+1. Instala el paquete keras de R en tu computadora. Sigue [estas instrucciones](https://keras.rstudio.com). 
+
+---
+
+2. **Si no funciona el método de arriba en tu computadora** (generalmente
+por instalaciones de python diferentes, etc), 
+puedes instalar en un contenedor de docker.
+
+Primero instala [docker](https://www.docker.com/get-started) en tu computadora.
+Baja el archivo Dockerfile del repositorio (se tiene que llamar Dockerfile, sin extensión).
+En línea de comandos, en el mismo directorio donde está el Dockerfile,
+corre las siguiente línea:
+
+
+```
+docker build -t aprendizaje-rstudio .
+```
+
+Esto va a tomar varios minutos, pero solo hay que correrlo una vez.
+
+Después, cuando quieras usar el contenedor, corre:
+
+```
+docker run --rm -p 8787:8787 -e PASSWORD=tupassword -v ~/tu/carpeta/local:/home/rstudio/ aprendizaje-rstudio
+```
+
+Nota: en windows la segunda línea debe ser de la forma:
+
+```
+docker run --rm -p 8787:8787 -e PASSWORD=tupassword -v /c/Users/miusuario/micarpeta:/home/rstudio/ aprendizaje-rstudio
+```
+
+Y abre en Chrome o Safari (o el navegador que uses) la dirección:
+
+http://localhost:8787
+
+Y ahora puedes trabajar en rstudio dentro del contenedor de docker (user: rstudio, 
+password: tupassword).  
+
+---
+
+3. Corre algún ejemplo para checar tu instalación, por ejemplo:
+
+https://keras.rstudio.com/articles/tutorial_basic_regression.html
+
+```{r}
+library(keras)
+mnist <- dataset_mnist()
+x_train <- mnist$train$x
+y_train <- mnist$train$y
+x_test <- mnist$test$x
+y_test <- mnist$test$y
+```
+```{r}
+# reshape
+x_train <- array_reshape(x_train, c(nrow(x_train), 784))
+x_test <- array_reshape(x_test, c(nrow(x_test), 784))
+# rescale
+x_train <- x_train / 255
+x_test <- x_test / 255
+```
+
+```{r}
+y_train <- to_categorical(y_train, 10)
+y_test <- to_categorical(y_test, 10)
+```
+
+```{r}
+model <- keras_model_sequential() 
+model %>% 
+  layer_dense(units = 256, activation = 'relu', input_shape = c(784)) %>% 
+  layer_dropout(rate = 0.4) %>% 
+  layer_dense(units = 128, activation = 'relu') %>%
+  layer_dropout(rate = 0.3) %>%
+  layer_dense(units = 10, activation = 'softmax')
+```
+
+```{r}
+summary(model)
+```
+
+```{r}
+model %>% compile(
+  loss = 'categorical_crossentropy',
+  optimizer = optimizer_rmsprop(),
+  metrics = c('accuracy')
+)
+```
+
+```{r}
+history <- model %>% fit(
+  x_train, y_train, 
+  epochs = 30, batch_size = 128, 
+  validation_split = 0.2
+)
+```
+
+```{r}
+plot(history)
+model %>% evaluate(x_test, y_test)
+model %>% predict_classes(x_test)
+```
+
+
+
+
+
+

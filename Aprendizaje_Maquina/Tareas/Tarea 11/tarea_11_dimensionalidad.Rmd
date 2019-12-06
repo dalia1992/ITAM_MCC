@@ -1,0 +1,141 @@
+---
+title: "Tarea 11 (reducción de dimensionalidad)"
+output: html_notebook
+---
+
+
+1. Considera $u$ que representa valores en una dimensión para los casos ($n$)
+y un vector $v$ que representa valores asociados para las variables ($p$).
+
+```{r}
+u <- c(0,1,2,4,5)
+v <- c(0.5,1,5)
+```
+
+Si $sigma = 10$, calcula la matriz de datos $n\times p$ generada por la matriz
+de rango 1  $\sigma u v^t$.
+
+```{r}
+sigma <- 10
+# completa el código
+X_1 <- sigma*u%*%t(v)
+X_1
+```
+¿Cómo describirías esta matriz de datos en términos de las columnas? ¿En términos 
+de los renglones?
+
+2. Si $X_1$ es la matriz que obtuviste en el inciso anterior, agrega ruido:
+```{r}
+set.seed(1545)
+X <- X_1 + matrix(rnorm(15*3, 0, 0.1), 5, 3)
+X
+```
+
+3. Recupera la dimensión que construimos en 1) usando la función *svd* (puedes intentar
+optimizando directamente si quieres):
+
+```{r}
+# completa el código
+svd_1 <- svd(X)
+```
+
+- Identifica las columnas de $U$ y $V$ en la salida de *svd* que corresponden a los vectores que usamos para construir $X_1$,
+
+```{r}
+U <- svd_1$u[,1]
+U
+V <- svd_1$v[,1]
+V
+D <- svd_1$d[1]
+D
+```
+
+
+- ¿Cuál es la relación entre los $u$ y $v$ que usamos al principio y los que obtuvimos
+de la función *svd*?
+```{r}
+svd_1$u[,1]/u
+svd_1$v[,1]/v
+
+```
+La relación queda $V=k_vv+\epsilon_v$ y $U=k_uu+\epsilon_v$. Es decir que es el vector original multiplicado por un escalar y se le agrega ruido. 
+
+4. Argumenta con la salida de *svd* que las aproximaciones de rango 2 y rango 3 son
+no aportan mucho sobre la de rango 1. 
+
+```{r}
+svd_1$d
+```
+Si observamos los valores de la matriz diagonal la primera entrada es $1391$ veces mayor que la segunda entrada y $3094$ veces mayor que la tercera. Por lo que las últimas dos no aportan mucho a la matriz generada por $u$ y $v$.
+
+- Verifica comparando matrices 
+que las aproximaciones de rango 1 y rango 2
+son muy similares. 
+
+```{r}
+MatR1 <- svd_1$d[1]*svd_1$u[,1]%*%t(svd_1$v[,1])
+MatR2 <- svd_1$u[,1:2]%*%diag(svd_1$d[1:2])%*%t(svd_1$v[,1:2])
+MatR1
+MatR2
+MatR1 - MatR2
+```
+
+
+
+- Verifica calculando la distancia Frobenius entre la aproximación de rango 1 y 2 y
+la matriz original, usando los valores singulares ($\sigma$).
+```{r}
+sum((MatR1-MatR2)^2)
+```
+
+
+5. Considera los siguientes datos de gasto por decil en distintos tipos de alimentos
+(cada decil contiene casi 3 millones de hogares, y el gasto está en miles de pesos.
+Nota: estos datos son de 2010/2008)
+```{r}
+library(readr)
+deciles <- read_csv('enigh_deciles.csv')
+deciles
+```
+
+6. Calcula la primera dimensión usando la función svd. ¿Qué explica esta dimensión? 
+(Nota: puedes cancelar signos de $u$ y $v$ para hacer más fácil la interpretación) 
+
+
+
+```{r}
+-svd_dec$u[,1]
+-svd_dec$v[,1]
+
+```
+Las carnes, los cereales, la leche y sus derivados son los alimentos más importantes. Se puede ver que por deciles el consumpo aumenta.
+7. Ahora considera la segunda dimensión
+
+- Considera primero el vector $v_2$ (¿para qué deciles
+tiene valores positivos? ¿para qué deciles tiene valores negativos?
+
+- Ahora considera el vector $u_2$. ¿Para qué rubros tiene valores grandes/chicos?
+¿Qué explica esta dimensión?
+
+```{r}
+svd_dec$v[,2]
+
+svd_dec$u[,2]
+```
+
+Tiene valores negativos para los deciles del 8 al diez, por lo que estos deciles consumen más productos como otros alimentos diversos, leche y derivados y frutas y menos cereales y huevo.
+
+
+- Puedes también calcular la siguiente matriz de rango 1, para que te ayude 
+a interpretar: es la componente $\sigma_2u_2v_2^t$, que se suma a $\sigma_1 u_1 v_1^t$
+para obtener la aproximación de rango 2. Puedes dividir entre miles (de manera que las unidades finales son millones) para interpretar
+más fácilmente:
+
+```{r}
+# modifica según el código que escribiste arriba:
+A <- round(svd_dec$d[2]*tcrossprod(svd_dec$u[,2], svd_dec$v[,2])/1e3)
+rownames(A) <- deciles$X1
+A
+```
+
+Se puede observar los productos que se consumen más (después de la base) en los distintos deciles. Productos como cereales y legumbres se consumen más en deciles más bajos. Mientras que deciles más altos consumen más carnes, pescados, frutas y alimentos diversos. Esto concuerda con la interpretación anterior.
