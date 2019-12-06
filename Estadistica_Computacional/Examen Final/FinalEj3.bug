@@ -1,0 +1,25 @@
+/*
+Final Ej3
+*/
+ 
+model{
+
+for(i in 1:N){		
+for(j in 1:J){
+for(k in 1:ci[i])
+		
+### Modelo = Verosimilitud	
+
+	Xijk[i,j,k] ~ dnorm(Xijk.mean[i,j,k],Xijk.prec[i,j,k]) 
+	Xijk.mean[i,j,k] <- nik[i,k]*thetaij[i,j]
+	Xijk.prec[i,j,k] <- tauij[i,j]/nik[i,k]
+
+} 
+
+### Iniciales = Prior
+	thetaij[i,j] ~ dunif(0,1)
+	tauijaux[i,j] ~ dunif(-10000,10000)
+	tauij[i,j] <- exp(tauijaux[i,j])
+
+}
+

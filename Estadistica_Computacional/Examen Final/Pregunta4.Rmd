@@ -1,0 +1,421 @@
+---
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(knitr)
+set.seed(5458)
+```
+
+### 4. Modelos jerárquicos y evaluación de ajuste {-}
+
+**Postestratificación** es un método estándar que se utiliza para corregir las 
+estimaciones obtenidas de muestreo probabilístico cuando hay distintas 
+probabilidades de selección y para corregir no respuesta. A grandes rasgos, se 
+divide la población en categorías y se estima la distribución de las respuestas 
+en cada categoría, después se pondera cada categoría de acuerdo a su tamaño en 
+la población. Típicamente las categorías se crean con variables demográficas
+(sexo, edad, ...). 
+
+La dificultad que suele surgir en el proceso de postestratificación es que 
+por una parte se desea crear las celdas lo más finas posible, considerando
+el cruce de muchas variables, con el objetivo de corregir en mayor medida
+posibles sesgos en las estimaciones; sin embargo, conforme aumenta el número de
+celdas el número de respondentes en cada una disminuye (muchas incluso quedan
+vacías) y esto conlleva a que las estimaciones dentro de cada celda sean poco
+precisas. Ante esta dificultad, la propuesta de MRP es modelar las respuestas 
+condicional a las variables de postestratificación, cuando las categorías de la
+postestratificación siguen de manera natural estructuras jerárquicas (como 
+hogares en estados) se puede mejorar la eficiencia de la estimación ajustando
+modelos multinivel. 
+
+Es así que MRP es una extensión a los ajustes de postestratificación clásicos 
+que permite usar más categorías y por tanto información más detallada de la 
+población. Una ventaja adicional es que además hace posible estimar la respuesta 
+en subcategorias demográficas o geográficas. En este ejercicio reproduciremos 
+el modelo que se ajusta en @parkgelmanbafumi lo puedes descargar de [esta liga ](http://www.stat.columbia.edu/~gelman/research/published/parkgelmanbafumi.pdf).
+
+En esta aplicación se utilizan encuestas de opinión pública en EUA, en 
+particular modelamos la probabilidad de que un respondente prefiera al 
+candidato Republicano como presidente y usando los datos de encuestas de 
+*CBS News* levantadas previo a la elección presidencial de 1988. 
+
+Las variables demográficas que determinan las celdas de postestratificación son:
+sexo, raza negra, edad (categórica), grado educativo y estado, si construyéramos 
+las celdas de postestratificación quedarían, 
+
+sexo(2) x raza negra(2) x edad(4) x educación(4) x estado(52) = 3264
+
+celdas y tenemos únicamente 2193 entrevistas, por lo que un enfoque clásico 
+utilizando todas las variables demográficas disponibles queda descartado.
+
+Ahora, definimos el modelo multinivel a usar, usaremos regresión logística 
+multinivel, en este planteamiento la variable $y_i$ indica si la
+$i$-ésima persona apoyaba al candidato republicano o no, y se agregan todas las
+variables demográficas como covariables.
+
+$$
+\begin{aligned}
+P(y_i = 1) &= logit^{-1}(\beta^0 + \beta^{mujer}\cdot mujer_i + \beta^{neg}\cdot neg_i+\beta^{mujer, neg}\cdot mujer_i \cdot neg_i+ \\
+& \beta_{edad(i)}^{edad} +  \beta_{edad(i), edu(i)}^{edad,edu} + 
+\beta_{estado(i)}^{estado})
+\end{aligned}
+$$
+
+En este ejemplo la estructura multinivel se reduce al coeficiente de
+estado que se modela con indicadoras de región y una medida del apoyo
+Republicano en el estado reportado en la elección previa.
+
+$$ \beta_{j}\sim N(\beta_{region(j)}^{region}+\beta^{vprev}\cdot vprev_j, \sigma^2_{estado})$$
+
+Ajustaremos este modelo usando el programa JAGS (Just Another Gibbs Sampler), y 
+utilizamos las estimaciones para hacer predicciones a nivel estado ($\theta_s$):
+
+$$\theta_s=\frac{\sum_{j \in s}N_{j}\pi_j}{\sum_{j \in s}N_{j}}$$
+
+donde $N_j$ indica el número de individuos en cada estado que 
+pertenecen a la $j$-ésima celda, la información para determinar las $N_j$ se 
+obtendrá del censo de población.
+
+### Implementación
+
+Datos en [election88](http://www.stat.columbia.edu/~gelman/arm/examples/election88/), 
+o en la carpeta data.
+
+```{r}
+# preparación de los datos
+library(haven)
+library(R2jags)
+# datos de encuestas
+polls <- read_dta("data/polls.dta")
+# nos quedamos con la última encuesta y eliminamos faltantes
+last_poll <- polls %>% 
+  filter(survey == 8) %>% 
+  na.omit()
+# datos de elecciones pasadas para utilizar como covariable y variable región
+presvote <- read_dta("data/presvote.dta") %>% 
+  cbind(region = c(3,4,4,3,4,4,1,1,5,3,3,4,4,2,2,2,2,3,3,1,1,1,2,2,3,2,4,2,4,
+                   1,1,4,1,3,2,2,3,4,1,1,3,2,3,3,4,1,3,4,1,2,4))
+```
+
+Los datos para el modelo serán:
+
+```{r, eval=TRUE}
+data_jags <- list(n = nrow(last_poll), 
+                  n_region = 5, 
+                  n_age = n_distinct(last_poll$age), 
+                  n_edu = n_distinct(last_poll$edu), 
+                  n_state = max(last_poll$state), 
+                  y = last_poll$bush, 
+                  female = last_poll$female,
+                  edu = last_poll$edu,
+                  age = last_poll$age,
+                  black = last_poll$black,
+                  state = last_poll$state, 
+                  v_prev = presvote$g76_84pr,
+                  region = presvote$region
+)
+```
+
+Y el código en JAGS:
+
+```{r, eval =TRUE}
+model_mrp <- "
+    model {
+        for (i in 1:n){
+            y[i] ~ dbern(p_bound[i])
+            p_bound[i] <- max(0, p[i])
+            p[i] <- ilogit(b_0 + b_female*female[i] + b_black * black[i] +
+                b_female_black * female[i]*black[i] +
+                a_age[age[i]] + a_edu[edu[i]] + a_age_edu[age[i],edu[i]] +
+                a_state[state[i]])
+    }
+    b_0 ~ dnorm (0, .0001)
+    b_female ~ dnorm (0, .0001)
+    b_black ~ dnorm (0, .0001)
+    b_female_black ~ dnorm (0, .0001)
+    for (j in 1:n_age) {
+        a_age[j] ~ dnorm(0, tau_age)}
+    for (j in 1:n_edu) {
+        a_edu[j] ~ dnorm(0, tau_edu)}
+    for (j in 1:n_age) {
+        for (k in 1:n_edu){
+            a_age_edu[j,k] ~ dnorm(0, tau_age_edu)
+        }
+    }
+    for (j in 1:n_state) {
+        a_state[j] ~ dnorm(a_state_hat[j], tau_state)
+        a_state_hat[j] <- a_region[region[j]] + b_v_prev*v_prev[j]
+    }
+    b_v_prev ~ dnorm (0, .0001) 
+    for (j in 1:n_region) {
+        a_region[j] ~ dnorm(0, tau_region)
+    }
+    tau_age <- pow(sigma_age, -2)
+    tau_edu <- pow(sigma_edu, -2)
+    tau_age_edu <- pow(sigma_age_edu, -2)
+    tau_state <- pow(sigma_state, -2)
+    tau_region <- pow(sigma_region, -2)
+    sigma_age ~ dunif (0, 100)
+    sigma_edu ~ dunif (0, 100)
+    sigma_age_edu ~ dunif (0, 100)
+    sigma_state ~ dunif (0, 100)
+    sigma_region ~ dunif (0, 100)
+    }
+    "
+cat(model_mrp, file = 'model_mrp.bugs')
+```
+
+1. **Modelo**. Ajusta el modelo y revisa convergencia, describe 
+cuantas cadenas, iteraciones y etapa de calentamiento elegiste, además 
+escribe como determinaste convergencia.
+
+Agregamos la variable *fem_black* para tener un modelo de los valores iniciales. 
+
+```{r}
+last_poll <- last_poll %>% mutate("fem_black"=last_poll$female*last_poll$black) %>% 
+  select(-c("year", "survey", "org"))
+
+```
+
+Generamos los valores iniciales de forma aleatoria. Estos van a provenir de un modelo parecido al que se busca, el modelo se calcula a partir de una muestra de los dato.
+
+```{r, eval=TRUE}
+# Definimos la función para generar valores inciales
+init_theta <- function(){
+  # Creamos una muestra aleatoria con reemplazo. 
+  muestra <- sample(1:2015, 2015, replace = TRUE)
+  x_s     <- last_poll[muestra,]
+  ageCat  <- unique(last_poll$age)[order(unique(last_poll$age))]
+  eduCat  <- unique(last_poll$edu)[order(unique(last_poll$edu))]
+  # Hacemos un modelo con regresión logística para darle un valor inicial 
+  # a los coeficientes
+  model   <- glm(bush~., data = x_s, family = binomial(link = "logit"))
+  Coefs   <- model$coefficients
+  # Los coeficientes con distintos estratos como age y edu, les asignamos =
+  # el valor del coeficiente dividido entre el valor de la categorìa.
+  # Para la variable de state repetimos el mismo coeficiente para cada estado.
+  # Para la categoría age_edu obtuvimos una matriz multiplicando el vector
+  # de coeficientes asignados para edad contra el transpuesto de los asignados
+  # para educación.
+  # Para la inical de las varianzas ocupamos una uniforme que toma valores entre 0 y 100.
+  
+ list(b_0=Coefs[1], b_female =Coefs[5], b_black=Coefs[6],
+       b_female_black=Coefs[8], a_age = Coefs[4]/ageCat,#
+       a_edu = Coefs[3]/eduCat,
+       a_age_edu=Coefs[4]/ageCat%*%t(Coefs[3]/eduCat),
+       a_state=rep(Coefs[2],51), 
+       sigma_age=runif(1,0,100), sigma_edu =runif(1,0,100),  
+       sigma_age_edu=runif(1,0,100), sigma_state=runif(1,0,100),  
+       sigma_region =runif(1,0,100))
+}
+```
+
+Corremos el modelo en JAGS para $10,000$ simulaciones con $2,000$ iteraciones de calentamiento para 4 cadenas con thin igual a 4.
+
+```{r, eval=TRUE}
+set.seed(12454)
+jags_fit <- jags(
+  model.file = "model_mrp.bugs",    # modelo de JAGS
+  inits = init_theta,   # valores iniciales
+  data = data_jags,    # lista con los datos
+  parameters.to.save = c("b_0", "b_female", "b_black", "b_female_black",
+                         "a_age", "a_edu", "a_age_edu", "a_state",
+                         "sigma_age", "sigma_edu", "sigma_age_edu",
+                         "sigma_state", "sigma_region"),  # parámetros por guardar
+  n.chains = 4,   # número de cadenas
+  n.iter = 10000,    # número de pasos
+  n.burnin = 2000,   # calentamiento de la cadena
+  n.thin = 4 
+)
+```
+
+Mostramos los valores para los parámentros obtenidos con JAGS.
+
+```{r}
+jags_fit
+```
+
+Ahora mostramos los valores de forma gráfica para determinar convergencia.
+
+```{r}
+plot(jags_fit)
+```
+
+Con este número de simulaciones no se tiene convergencia sobre los parámetros relacionados con los estados. Esto lo podemos verificar con el $\hat{R}$ que es cercano a $1.5$ También podemos ver que la estimación puntual de las cuatro cadenas no se reduce a un solo punto.
+
+
+2. **Evaluación de ajuste**. Usaremos la distribución predictiva posterior para
+simular del modelo y comparar con los datos observados. En particular veremos 
+como se comparan las simulaciones del modelo por estado, la gráfica con lo$s 
+datos será la que sigue:
+
+```{r, eval=TRUE}
+bush_state <- last_poll %>% 
+  group_by(state) %>% 
+  summarise(prop = mean(bush, na.rm = TRUE)) %>% 
+  ungroup() %>% 
+  mutate(state_ord = as.numeric(reorder(state, prop)))
+ggplot(bush_state, aes(x = state_ord, y = prop)) +
+  geom_line()
+```
+
+Debes simular del modelo 10 conjutos de datos del tamaño de los originales 
+(replicaciones de los datos) y hacer una gráfica de páneles donde muestres los 
+datos originales y las replicaciones, ¿que concluyes al ver la gráfica?
+
+Obtenemos las variables necesarias para evaluar el modelo a partir de la estimación promedio de los parámetros.
+
+```{r}
+# Obtener las simulaciones de las variables del modelo
+Vars <- c("b_0", "b_female", "b_black", "b_female_black",
+          "a_age", "a_edu", "a_age_edu", "a_state")
+
+for (i  in Vars) {
+  assign(i, jags_fit$BUGSoutput$mean[[i]])
+}
+
+```
+
+Primero generamos replicaciones de los datos.
+
+```{r}
+# Replicaciones de los datos
+for (i in 1:10) {
+  muestra <- sample(1:2015, 2015, replace = TRUE)
+  muestra <- last_poll[muestra,]
+  assign(paste0("muestra_",i),muestra)
+}
+```
+
+Obtenemos la predicción para las 10 muestras de los datos a partir del promedio de los parámetros según el modelo de JAGS.
+
+```{r, message=FALSE, warning=FALSE}
+# Evaluación del modelo
+Nsims    <- length(b_0)
+invLogit <- function(x){exp(x)/(1+exp(x))}
+
+for (i in 1:10) {
+  muestra <- get(paste0("muestra_",i))
+  nparam  <- sample(1:Nsims,1)
+  muestra <- muestra %>% mutate("bush_pred"= b_0+ b_female*female +
+                                  b_black * black +
+                                  b_female_black * female*black +
+                                  a_age[age] + a_edu[edu] +
+                                  a_state[state])
+  aux <- c()
+  for (j in 1:2015) {
+    aux <- c(aux,
+             rbinom(1,1, invLogit(muestra$bush_pred[j] + 
+                                    a_age_edu[muestra$age[j] , muestra$edu[j]])))
+  }
+  muestra$bush_pred <- aux
+  assign(paste0("muestra_",i), muestra)
+  bush_state_i  <- muestra %>% group_by(state) %>% 
+    summarise(prop = mean(bush_pred, na.rm = TRUE)) %>% 
+    ungroup() %>% 
+    mutate(state_ord = as.numeric(reorder(state, prop))) %>% 
+    mutate("sim"=i)
+  assign(paste0("bush_state_",i), bush_state_i)
+}
+
+```
+
+Obtenemos la proporción estimada de votos para Bush por estado para cada una de las diez muestras.
+
+```{r}
+bush_state_sims <- rbind(cbind(bush_state, "sim"=0),
+                         bush_state_1, bush_state_2, bush_state_3,
+                         bush_state_4, bush_state_5, bush_state_6,
+                         bush_state_7, bush_state_8, bush_state_9,
+                         bush_state_10)
+
+ggplot(bush_state_sims, aes(x = state_ord, y = prop)) +
+  geom_line()+
+  facet_wrap(~ sim)+
+  xlab("Estado")+ ylab("Proporció de votos por Bush")
+
+```
+ 
+ En general todas las gráficas son parecidas, en la quinta simulación hubo un poco más de error, pero se ve bien en la mayoría de los casos ya que se obtiene una gráfica similar a la original.
+
+3. El siguiente código predice para cada celda de la tabla del censo, vale la 
+pena notar, que para cada celda tenemos una lista en el vector `pred` con las 
+simuaciones que le corresponden.
+
+```{r}
+# construct the n.sims x 3264 matrix
+census88 <- read_dta("data/census88.dta")
+glimpse(census88)
+coef_sims <- jags_fit$BUGSoutput$sims.matrix
+pred_cell <- census88 %>% 
+  rowwise() %>% 
+  mutate(
+    pred = list(invLogit(coef_sims[, "b_0"] + 
+                           coef_sims[, "b_female"] * female +
+                           coef_sims[, "b_black"] * black + 
+                           coef_sims[, "b_female_black"] * female * black +
+                           coef_sims[, str_c("a_age[", round(age), "]")] +
+                           coef_sims[, str_c("a_edu[", round(edu), "]")] +  
+                           coef_sims[, str_c("a_age_edu[", round(age), ",", round(edu), "]")] +  
+                           coef_sims[, str_c("a_state[", round(state), "]")]))) 
+```
+
+
+Para hacer las estimaciones por estado hace falta ponderar por el número de 
+casos en cada celda:
+
+$$\theta_s=\frac{\sum_{j \in s}N_{j}\pi_j}{\sum_{j \in s}N_{j}}$$
+Evaluamos el estimador $\theta_s$ para cada simulación de los parámetros. 
+
+```{r}
+# La función Expand la obtuvimos de:
+# https://stackoverflow.com/questions/15930880/unlist-all-list-elements-in-a-dataframe
+# y sirve para convertir los elementos de la lista en observaciones de la base
+# para cada variable que contiene listas
+Expand <- function(data) {
+  ListCols <- sapply(data, is.list)
+  cbind(data[!ListCols], t(apply(data[ListCols], 1, unlist)))
+}
+# Obtenemos la predicción por estado para cada simulación considerando
+# la ponderación correspondiente.
+PredSims_state <- Expand(pred_cell) %>% 
+  gather("sims", "preds", pred1:pred8000) %>%
+  group_by(state, sims) %>%
+  summarise("preds"=sum(N*preds)/sum(N))
+```
+
+4. Genera las simulaciones de $\theta_s$, recuerda que debarás calcular una
+simulación de cada $\theta_s$ por cada simulación de $\pi__j$ obtenida con el 
+código de arriba. Realiza una gráfica con intervalos de credibilidad del 95% 
+para cada $theta_s$.
+
+Con las estimaciones obtenidas previamente calculamos el promedio y el valor en los cuantiles $0.025$ y $0.975$.
+
+```{r}
+# Obtenemos los valores de la media y de los cuantiles 0.025 y 0.975
+# para generar intervalos de confianza al $95%$
+CI_Sims_state <- PredSims_state %>%  ungroup() %>% 
+  group_by(state) %>% 
+  summarise("mean"=mean(preds), "LB"=quantile(preds,0.025), "UB"=quantile(preds, 0.975))
+
+glimpse(CI_Sims_state)
+```
+
+Ahora graficamos las estimaciones con sus respectivos intervalos de confianza.
+
+```{r}
+# Graficamos los intervalos de confianza
+ggplot(CI_Sims_state)+theme_bw()+
+  geom_point(aes(state, mean), col="black")+
+  geom_pointrange(aes(state, y=mean, ymin = LB, ymax = UB), size = 0.25)+
+  xlab("Estado")+ylab("Probabilidad de triunfo de Bush")
+```
+

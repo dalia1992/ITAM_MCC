@@ -1,0 +1,185 @@
+---
+title: "Tarea 11"
+author: "Dalia Camacho"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 11-Metropolis {-}
+```{r}
+library(ggplot2)
+```
+
+
+Regresamos al ejercicio de IQ de la tarea anterior, en ésta hiciste cálculos 
+para el caso de una sola observación. En este ejercicio consideramos el caso en 
+que observamos una muestra $x=\{x_1,...,x_N\}$, y utilizaremos Metrópolis 
+para obtener una muestra de la distribución posterior.
+
+a) Crea una función $prior$ que reciba los parámetros $\mu$ y $\tau$ que definen 
+tus creencias del parámetro desconocido $\theta$ y devuelva $p(\theta)$, donde 
+$p(\theta)$ tiene distriución $N(\mu, \sigma^2)$
+
+```{r}
+prior <- function(mu, tau){
+  function(theta){
+    dnorm(theta,mu,tau)
+  }
+}
+```
+
+b) Utiliza la función que acabas de escribir para definir una distribución 
+inicial con parámetros $\mu = 150$ y $\tau = 15$, llámala _mi\_prior_.
+
+```{r}
+mu       <- 150
+tau      <- 15
+mi_prior <- prior(mu=mu, tau=tau)
+```
+
+
+Ya que tenemos la distribución inicial debemos escribir la verosimilitud, en 
+este caso la verosimilitud es:
+
+$$p(x|\theta, \sigma^2)=\frac{1}{(2\pi\sigma^2)^{N/2}}exp\left(-\frac{1}{2\sigma^2}\sum_{j=1}^{N}(x_j-\theta)^2\right)$$
+$$=\frac{1}{(2\pi\sigma^2)^{N/2}}exp\left(-\frac{1}{2\sigma^2}\bigg(\sum_{j=1}^{N}x_j^2-2\theta\sum_{j=1}^{N} x_j + N\theta^2 \bigg) \right)$$
+
+Recuerda que estamos suponiendo varianza conocida, supongamos que la 
+desviación estándar es $\sigma=20$.
+
+$$p(x|\theta)=\frac{1}{(2\pi (20^2))^{N/2}}exp\left(-\frac{1}{2 (20^2)}\bigg(\sum_{j=1}^{N}x_j^2-2\theta\sum_{j=1}^{N} x_j + N\theta^2 \bigg) \right)$$
+
+
+c) Crea una función $likeNorm$ en R que reciba la desviación estándar, la suma 
+de los valores observados $\sum x_i$,  la suma de los valores al cuadrado 
+$\sum x_i^2$ y el número de observaciones $N$ la función devolverá la 
+función de verosimilitud  (es decir va a regresar una función que depende 
+únicamente de $\theta$).
+
+```{r}
+# sigma: desviación estándar S: sum x_i, S2: sum x_i^2, N: número obs.
+likeNorm <- function(sigma, S, S2, N){
+  function(theta){
+    1/((2*pi*sigma^2)^(N/2))*exp(-1/(2*sigma^2)*(S2 - 2*theta*S + N*theta^2))
+  }
+}
+```
+
+d) Supongamos que aplicamos un test de IQ a 100 alumnos y observamos que la suma
+de los puntajes es 13300, es decir $\sum x_i=13,000$ y $\sum x_i^2=1,700,000$.
+Utiliza la función que acabas de escribir para definir la función de 
+verosimilitud condicional a los datos observados, llámala _mi\_like_.
+
+```{r}
+N       <- 100
+S       <- 13000
+S2      <- 1700000
+desvest <- 20
+mi_like <- likeNorm(sigma = desvest, S = S, S2 = S2, N = N)
+```
+
+
+e) La distribución posterior no normalizada es simplemente el producto de 
+la inicial y la posterior:
+
+```{r}
+postRelProb <- function(theta){
+  mi_like(theta) * mi_prior(theta)
+}
+```
+
+Utiliza Metropolis para obtener una muestra de valores representativos de la
+distribución posterior de $\theta$. Para proponer los saltos utiliza una 
+Normal(0, 5).
+
+Definimos la caminata aleatoria a seguir
+```{r}
+# Definimos la caminata aleatoria a seguir
+caminaAleat <- function(theta){ # theta: valor actual
+  salto_prop <- rnorm(1, 0, sd = sqrt(5)) # salto propuesto
+  theta_prop <- theta + salto_prop # theta propuesta
+  if(theta_prop < 0){ # si el salto implica salir del dominio
+    return(theta)
+  }
+  u <- runif(1) 
+  p_move <-  min(postRelProb(theta_prop) / postRelProb(theta), 1) # prob mover
+  if(p_move  > u){
+    return(theta_prop) # aceptar valor propuesto
+  }
+  else{
+    return(theta) # rechazar
+  }
+}
+
+
+```
+
+Ahora generamos una simulacioón de la caminata aleatoria
+```{r}
+set.seed(5885415)
+Nsim     <- 11000
+thetavec <- S/N
+for(i in 2:Nsim){
+  thetavec[i] <- caminaAleat(thetavec[i-1])
+}
+```
+
+f) Grafica los valores de la cadena para cada paso.
+
+```{r}
+ggplot()+theme_bw()+
+  geom_point(aes(1:Nsim, thetavec), alpha=0.5)+
+  geom_jitter()+
+  xlab("")+
+  ylab("theta")
+```
+
+g)  Elimina los valores correspondientes a la etapa de calentamiento y realiza
+un histograma de la distribución posterior.
+```{r}
+ggplot()+theme_bw()+
+  geom_point(aes(1:1000, thetavec[1:1000]), alpha=0.5)+
+  xlab("")+
+  ylab("theta")+
+  ggtitle("Primeras 1000 simulaciones")
+```
+
+
+No se logra distinguir la etapa de calentamiento ni siquiera considerando únicamente los primeros mil pasos. Pero podemos eliminar los primeros 700 pasos por si ese fuera el caso.
+
+```{r}
+theta_sim <- thetavec[701:Nsim]
+```
+
+h)  Si calcularas la posterior de manera analítica obtendrías que $p(x|\theta)$
+es normal con media:
+$$\frac{\sigma^2}{\sigma^2 + N\tau^2}\mu + \frac{N\tau^2}{\sigma^2 + N \tau^2}\overline{x}$$
+y varianza
+$$\frac{\sigma^2 \tau^2}{\sigma^2 + N\tau^2}$$
+
+donde $\bar{x}=1/N\sum_{i=1}^N x_i$ es la media de los valores observados.
+Realiza simulaciones de la distribución posterior calculada de manera analítica
+y comparalas con el histograma de los valores generados con Metropolis.
+
+```{r}
+x_bar <- S/N
+post_mu      <- desvest^2/(desvest^2+N*tau^2)*mu + N*tau^2/(desvest^2 + N*tau^2)*x_bar
+post_desvest <- sqrt(desvest^2*tau^2/(desvest^2+N*tau^2))
+Analitic_sim <- rnorm(Nsim, post_mu, post_desvest)
+
+ggplot()+ theme_bw()+
+  geom_density(aes(theta_sim, color="Metropolis"), adjust=2)+
+  geom_density(aes(Analitic_sim, color="Analítica"), adjust=2)+
+  ylab("densidad")+
+  xlab("theta")
+
+```
+
+
+i) ¿Cómo utilizarías los parámetros $\mu, \tau^2$ para describir un escenario 
+donde sabes poco del verdadero valor de la media $\theta$?
+
+Como la a priori refleja la incertidumbre que tengo sobre el verdadero valor de theta elegiría un valor de $\mu$ que considere posible y un valor de $\tau^2$ grande, incluso $\mu=\tau²$ como ocurre en la distribución poisson.

@@ -1,0 +1,14 @@
+
+model{
+  for(t in 1:N){
+    x[t] ~ dbern(theta[coin[t]])
+  }
+  for(j in 1:nCoins){
+    theta[j] ~ dbeta(a, b)
+  }
+  a <- mu * kappa
+  b <- (1 - mu) * kappa
+  # A_mu = 1, B_mu = 1
+  mu ~ dbeta(1, 1)
+  kappa ~ dgamma(1, 0.1)
+}

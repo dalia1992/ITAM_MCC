@@ -1,0 +1,108 @@
+---
+title: "Tarea 2. Transformación de datos"
+author: "Dalia Camacho"
+date: "August 28, 2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Transformación de datos
+Entrega: Lunes 27 de agosto.
+
+Utiliza los datos de vuelos (flights) para responder la siguientes preguntas.
+
+```{r,echo=FALSE}
+# Definir librerías y carpeta
+setwd("~/Dropbox/ITAM_MCC/Semestre_1/Estadística computacional/Clases/Clase 2/02-manipulacion/02-manipulacion/data")
+
+library(readr)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+flights <- read_csv("flights.csv") 
+```
+
+
+### ¿A qué hora del día debo volar para evitar, lo más posible, retrasos de salida?
+
+```{r}
+flights %>% 
+  group_by(hour)%>%
+  summarise(mean=mean(dep_delay)) %>% 
+  arrange(mean)
+
+```
+
+Para evitar retrasos de salida, la mejor hora del día son las 4 de la mañana.
+
+
+###Para cada destino calcula el total de minutos de retraso de salida. 
+
+```{r}
+dest_delay <- flights %>% 
+  group_by(dest) %>% 
+  summarise(tot_delay=sum(dep_delay, na.rm = T))
+
+glimpse(dest_delay)
+```
+#Para cada vuelo calcula su proporción del total de retrasos de su destino.
+```{r}
+flt_delay <- flights %>% 
+  filter(dep_delay>0) %>% 
+  group_by(dest) %>% 
+  mutate(tot_dest_delay=sum(dep_delay,na.rm = TRUE)) %>% 
+  group_by(dest, hour,carrier) %>% 
+  summarise(prop_delay=(mean(dep_delay/tot_dest_delay)))
+
+glimpse(flt_delay %>% 
+          arrange(desc(prop_delay)))
+
+```
+
+
+###Los retrasos suelen estar correlacionados temporalmente, incluso cuando se ha resuelto el problema que ocasionó los retrasos iniciales, vuelos posteriores suelen mantener algo de retraso. Usando la función lag() explora como el retraso de salida de un vuelo se relaciona con el retraso de salida del vuelo anterior. Realiza una gráfica para visualizar tus hallazgos.
+
+```{r}
+# ?lag
+flights <- flights %>% 
+  arrange(date, hour) %>% 
+  mutate(lagged=lag(dep_delay))
+
+ggplot(flights)+
+  geom_point(aes(dep_delay,lagged))
+
+
+```
+
+Los vuelos con mayor retraso de salida tienen un lag cercano a cero, por lo que vuelos anteriores influyen en el retraso de vuelos posteriores
+
+###Para cada destino, puedes encontrar vuelos sospechosamente rápidos o lentos? (quizá debido a porblemas en la captura de los datos). 
+
+```{r}
+# Ordenar vuelos por destino y tiempo de retraso en el aire del más letno al más rápido
+glimpse(flights %>% 
+  mutate(flt_delay=arr_delay-dep_delay) %>% 
+  arrange(desc(dest,flt_delay)))
+```
+
+
+
+###Calcula el tiempo de vuelo relativo a la mediana de tiempo de vuelo a su destino. Qué vuelos se retrasaron más en el aire?
+
+```{r}
+glimpse(flights %>% 
+  group_by(dest) %>% 
+  mutate(dif=time-median(time, na.rm = TRUE)) %>% 
+  arrange(desc(dif)))
+```
+
+#Encuentra los destinos que se vuelan por al menos dos compañías (carriers).
+```{r}
+flights %>% 
+  group_by(dest) %>% 
+  summarise(N=length(unique(carrier))) %>% 
+  filter(N>=2)
+```

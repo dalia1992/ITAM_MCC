@@ -1,0 +1,65 @@
+---
+title: 'Tarea 7: Simulación de modelos'
+author: "Dalia Camacho"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Supongamos que una compañía cambia la tecnología usada para producir una cámara, un estudio estima que el ahorro en la producción es de 5 por unidad con un error estándar de 4. Más aún, una proyección estima que el tamaño del mercado (esto es, el número de cámaras que se venderá) es de 40,000 con un error estándar de 10,000. Suponiendo que las dos fuentes de incertidumbre son independientes, usa simulación de variables aleatorias normales para estimar el total de dinero que ahorrará la compañía, calcula un intervalo de confianza.
+
+```{r}
+library(purrr)
+library(ggplot2)
+```
+
+Definimos los parámetros de venta de cámaras:
+```{r}
+set.seed(65646)
+mu_n    <- 40000
+sigma_n <- sqrt(10000)
+Nsim    <- 5000
+```
+
+Definimos los parámetros del ahorro:
+```{r}
+mu_ah    <- 5
+sigma_ah <- sqrt(4)
+```
+
+Para hacer una simulación del ahorro total se hace una simulación de la venta total de cámaras, para cada cámara se simula el ahorro de fabricar esa cámara en particular. Finalmente se suma el ahorro de todas las cámaras.
+
+```{r}
+Sim_ahorro <- function(){
+  ncamaras <- ceiling(rnorm(1,mu_n,sigma_n))
+  ahorro_i <- rnorm(ncamaras,mu_ah, sigma_ah)
+  thetasim <- sum(ahorro_i)
+  thetasim
+}
+```
+
+Corremos la simulación 5000 veces
+
+```{r}
+ThetasSim <- rerun(Nsim,Sim_ahorro()) %>% flatten_dbl()
+
+ggplot()+theme_bw()+
+  geom_histogram(aes(ThetasSim),bins=30,
+                 fill="pink", col="pink", alpha=0.8)+
+  xlab("Ahorro total")+
+  ylab("")
+```
+
+Obtenemos el total estimado y su intervalo de confianza
+```{r}
+theta  <- mean(ThetasSim)
+IC_low <- quantile(ThetasSim, 0.025)
+IC_up  <- quantile(ThetasSim, 0.975)
+```
+
+El valor estimado del ahorro es de `r round(theta)`, con intervalo de confianza `r paste0("(", round(IC_low), ", ", round(IC_up), ")")`.

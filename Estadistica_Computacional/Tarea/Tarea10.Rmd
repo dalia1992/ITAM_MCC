@@ -1,0 +1,131 @@
+---
+title: "Tarea 10"
+author: "Dalia Camacho"
+date: "November 1, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 10-Familias conjugadas {-}
+```{r}
+library(tidyverse)
+```
+
+
+1. **Modelo Beta-Binomial**
+Una compañía farmacéutica afirma que su nueva medicina incrementa la 
+probabilidad de concebir un niño (sexo masculino), pero aún no publican 
+estudios. Supón que conduces un experimento en el cual 50 parejas se 
+seleccionan de manera aleatoria de la población, toman la medicina y conciben
+un bebé, nacen 30 niños y 20 niñas.
+
+a) Quieres estimar la probabilidad de concebir un niño para parejas que 
+toman la medicina. ¿Cuál es una inicial apropiada? No tiene que estar centrada
+en 0.5 pues
+esta corresponde a personas que no toman la medicina, y la inicial debe reflejar 
+tu incertidumbre sobre el efecto de la droga. 
+```{r}
+theta    <- seq(0.05,0.95, by=0.05)
+prior    <- c(rep(0,8), c(0.1,0.2, 0.2, 0.2, 0.2, 0.1), rep(0,5))
+prior_df <- data_frame(theta, prior)
+prior_df
+
+ggplot(prior_df)+theme_bw()+
+  geom_bar(aes(x=theta, y=prior), stat = "identity", fill="forestgreen")+
+  ylab("inicial")
+```
+
+
+
+b) Usando tu inicial de a) grafica la posterior y decide si es creíble que las
+parejas que toman la medicina tienen una probabilidad de 0.5 de concebir un
+niño.
+
+```{r}
+# Estos son los nuevos datos que observo
+N <- 50 # parejas
+z <- 30 # niños
+
+# Verosimilitud (viene de una Bernoulli)
+Like    <- theta ^ z * (1 - theta) ^ (N - z)
+product <- Like * prior
+
+```
+
+```{r}
+# Distribución posterior (normalizamos)
+post <- product / sum(product)
+
+dists <- bind_cols(prior_df, post = post)
+round(dists, 3)
+```
+```{r}
+ggplot(dists)+theme_bw()+
+  geom_bar(aes(theta,post), stat = "identity", fill="navyblue")+
+  ylab("posterior")
+```
+
+
+
+c) Supón que la farmacéutica asevera que la probabilidad de concebir un niño
+cuando se toma la medicina es cercana al 60% con alta certeza. Representa esta
+postura con una distribución inicial Beta(60,40). Comparala con la inicial de 
+un escéptico que afirma que la medicina no hace diferencia, representa esta
+creencia con una inicial Beta(50,50). Recuerda que 
+$$p(x)=Beta(z+a,N-z+b)/Beta(a,b)$$
+Calcula el valor de $p(x)$ para cada modelo y el factor de Bayes (asume 
+$p(M_1)=p(M_2)=0.5$).
+
+```{r}
+px_M1  <- beta(z+60,N-z+40)/beta(60,40)
+px_M2  <- beta(z+50,N-z+50)/beta(50,50)
+Bayfac <- px_M1/px_M2
+Bayfac
+```
+
+El factor de Bayes es `r round(Bayfac,3)`, por lo que el modelo de la farmacéutica es más adecuado que el modelo escéptico.
+
+2. **Otra familia conjugada**
+Supongamos que nos interesa analizar el IQ de una muestra de estudiantes del 
+ITAM y suponemos que el IQ de un estudiante tiene una distribución normal 
+$x \sim N(\theta, \sigma^2)$ con $\sigma ^ 2$ conocida.
+
+Considera que observamos el IQ de un estudiante $x$. 
+La verosimilitud del modelo es:
+$$p(x|\theta)=\frac{1}{\sqrt{2\pi\sigma^2}}exp\left(-\frac{1}{2\sigma^2}(x-\theta)^2\right)$$
+
+Realizaremos un análisis bayesiano por lo que hace falta establecer una 
+distribución inicial, elegimos $p(\theta)$ que se distribuya $N(\mu, \tau^2)$ 
+donde elegimos los parámetros $\mu, \tau$ que mejor describan nuestras creencias
+iniciales, por ejemplo si tengo mucha certeza de que el $IQ$ promedio se ubica
+en 150, elegiría $\mu=150$ y una desviación estándar chica por ejemplo 
+$\tau = 5$. Entonces la distribución inicial es:
+
+$$p(\theta)=\frac{1}{\sqrt{2\pi\tau^2}}exp\left(-\frac{1}{2\tau^2}(\theta-\mu)^2\right)$$
+
+a) Calcula la distribución posterior $p(\theta|x) \propto p(x|\theta)p(\theta)$, 
+usando la inicial y verosimilitud que definimos arriba. Una vez que realices la
+multiplicación debes identificar el núcleo de una distribución Normal, 
+¿cuáles son sus parámetros (media y varianza)?
+
+\begin{equation}
+\begin{aligned}
+p(\theta|x) &\propto p(x|\theta)p(\theta)\\
+p(\theta|x) &\propto \frac{1}{\sqrt{2\pi\sigma^2}}exp\left(-\frac{1}{2\sigma^2}(x-\theta)^2\right)\cdot \frac{1}{\sqrt{2\pi\tau^2}}exp\left(-\frac{1}{2\tau^2}(\theta-\mu)^2\right)\\
+
+p(\theta|x) &\propto exp\left(-\frac{1}{2\sigma^2}(x-\theta)^2\right)\cdot exp\left(-\frac{1}{2\tau^2}(\theta-\mu)^2\right)\\
+
+p(\theta|x) &\propto exp\left(-\frac{1}{2\sigma^2}(x-\theta)^2-\frac{1}{2\tau^2}(\theta-\mu)^2\right)\\
+
+p(\theta|x) &\propto exp\left(-\frac{1}{2\sigma^2}(x^2-2\theta \cdot x +\theta^2)-\frac{1}{2\tau^2}(\theta^2-2\mu\theta +\mu^2)\right)\\
+
+
+p(\theta|x) &\propto exp\left(-\frac{1}{2}\frac{\tau^2+\sigma^2}{\tau^2\sigma^2}\left(\theta-\frac{x\tau^2+\mu\sigma^2}{\tau^2+\sigma^2}\right)^2\right)\\
+
+\end{aligned}
+\end{equation}
+
+Los parámetros de la normal son media: $\frac{x\tau^2+\mu\sigma^2}{\tau^2+\sigma^2}$ y la varianza es: $\frac{\tau^2\sigma^2}{\tau^2+\sigma^2}$.

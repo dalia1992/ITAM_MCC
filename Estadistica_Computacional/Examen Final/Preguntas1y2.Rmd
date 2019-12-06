@@ -1,0 +1,537 @@
+---
+title: "Examen Final"
+author: "Dalia Camacho y Gabriela Vargas"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Final {-}
+
+* Puede realizarse individual o en parejas.
+
+* Enviar por correo electónico documento final (no Rmd).
+
+* Entregar **sábado 8 antes de las 20:00 hr**, después de eso se califica sobre
+7 (máximo entregar domingo a las 13:00 hrs).
+
+* Incluir código y respuestas que describan lo que se hizo.
+
+* Dudas y artículo para pregunta 3 [aquí](https://drive.google.com/open?id=1IadZgMhrTAsll8YLLwcnBhk17UcwOdtK).
+
+### 1. Inferencia gráfica {-}
+
+```{r, message=FALSE}
+library(tidyverse)
+library(knitr)
+```
+
+Para este ejercicio utilizaremos los datos de un estudio
+longitudinal de _Singer y Willet 2003_ (wages). En este estudio se visitó a
+hombres en edad laboral que habitan en EUA, se visitó a cada sujeto entre 1 y 13
+veces, en cada visita se registraron las siguientes mediciones:
+
+id: identificador de sujeto  
+hgc: grado de educación más alto completado  
+lnw : logaritmo natural del salario  
+exper: años de experiencia laboral  
+
+El objetivo del ejercicio es estudiar la relación entre salario y experiencia
+laboral por raza para aquellos sujetos cuyo año máximo de estudios completados 
+es igual a 9, 10 u 11, estos son sujetos que abandonaron sus estudios durante
+preparatoria. Seguiremos un enfoque no paramétrico que consiste en ajustar un 
+suavizador para cada grupo de raza (blanco, hispano o negro) como se muestra 
+en la siguiente gráfica.
+
+```{r}
+load("data/wages_t.RData")
+```
+
+```{r}
+ggplot(wages_t, aes(x = exper, y = lnw)) +
+  geom_point(alpha = 0.25, size = 2) + 
+  geom_smooth(aes(group = race, color = race), method = "loess", se = FALSE) 
+```
+
+Utilizaremos una prueba de hipótesis gráfica para determinar si existe una 
+diferencia significativa entre las curvas.
+
+1. **Preparación de los datos**.  
+
+* Selecciona los sujetos con grado de estudios completado igual a 9, 10 u 11.
+
+Los datos ya estaban filtrados por grado de estudios completados de 9 a 11.
+
+* Elimina las observaciones donde el logaritmo del salario (lnw) es mayor a 3.5.
+```{r}
+# Se eliminan las observaciones en las que el salario en escala logarìtmica
+# es mayor a 3.5
+wages_t <- wages_t %>% filter(lnw<=3.5)
+```
+
+
+* Crea una variable correspondiente a raza, un sujeto es de raza hispana si 
+la variable hispanic toma el valor 1, de raza negra si la variable black
+toma el valor 1 y de raza blanca si las dos anteriores son cero.
+
+La variable raza ya está presente en la base original.
+
+
+* Crea un subconjunto de la base de datos de tal manera que tengas el mismo 
+número de sujetos distintos en cada grupo de raza. Nota: habrá el mismo número
+de sujetos en cada grupo pero el número de observaciones puede diferir pues los
+sujetos fueron visitados un número distinto de veces. 
+
+```{r}
+# Se elige una semilla
+set.seed(6583)
+
+# Se cuenta el número de individuos en cada grupo racial
+Nhispanic <- unique(wages_t$id[wages_t$race=="hispanic"])
+Nblack    <- unique(wages_t$id[wages_t$race=="black"])
+Nwhite    <- unique(wages_t$id[wages_t$race=="white"])
+
+# Obtenemos el número de individuos que se conservan de cada grupo racial
+Nrace     <- min(length(Nhispanic), length(Nblack), length(Nwhite))
+
+# Se obtiene la muestra con el número de individuos obtenido anteriormente
+Nhispanic <- sample(Nhispanic, Nrace)
+Nblack    <- sample(Nblack, Nrace)
+Nwhite    <- sample(Nwhite, Nrace)
+
+wages_t <- wages_t %>% filter(id %in% c(Nhispanic,Nblack,Nwhite))
+
+```
+
+2 **Prueba de hipótesis visual**  
+
+* El escenario nulo consiste en que no hay diferencia entre las razas. Para
+generar los datos nulos, la etiqueta de raza de cada sujeto se permuta, 
+es decir, se reasigna la raza de cada sujeto de manera aleatoria (para todas las
+mediciones de un sujeto dado se reasigna una misma raza). Genera 10 conjuntos de
+datos nulos y para cada uno ajusta una curva _loess_ siguiendo la instrucción de
+la gráfica de arriba. Crea una gráfica de paneles donde incluyas los 10
+conjuntos nulos y los datos reales, estos últimos estarán escondidos de manera
+aleatoria.
+
+```{r}
+# Cargamos la librería nullabor
+library(nullabor)
+```
+
+```{r}
+# Fijamos una nueva semilla 
+set.seed(9293)
+
+# Fijamos los datos reales en la posición 5 y para otros 9 casos
+# permutamos el valor de raza
+wages_null <- lineup(null_permute('race'), n = 10, wages_t, pos = 5)
+
+# Graficamos los datos originales y permutados en una gráfica de paneles
+ggplot(wages_null, aes(x = exper, y = lnw)) +
+  geom_point(alpha = 0.25, size = 2) + 
+  facet_wrap(~ .sample)+
+  geom_smooth(aes(group = race, color = race), method = "loess", se = FALSE) 
+
+```
+
+
+* Realiza la siguiente pregunta a una o más personas __que no tomen la clase__:
+
+_Las siguientes 10 gráficas muestran suavizamientos de log(salarios) por años
+de experiencia laboral. Una de ellas usa datos reales y las otras 9 son datos
+nulos, generados bajo el supuesto de que no existe diferencia entre los 
+subgrupos. ¿Cuál es la gráfica más distinta?_
+
+Le preguntamos a una persona y eligió correctamente la gráfica 5, aunque también dudó sobre la gráfica 8.
+
+Reporta si las personas cuestionadas pudieron distinguir los datos.
+
+* ¿Cuál es tu conclusión de la prueba de hipótesis visual?
+La prueba de hipótesis visual puede dar buenos resultados, sin embargo siempre está presente la observación subjetiva del observador.
+
+
+* ¿A cuántas personas preguntaste y cuál es el valor p de la prueba?
+Le preguntamos a una persona, el valor-p de la prueba es $0.1$.
+
+
+
+### 2. Simulación para el cálculo de tamaños de muestra
+
+En el conteo rápido del estado de Guanajuato, se calculó el tamaño de muestra
+fijando como objetivo que los intervalos del $95$% de confianza tuvieran una 
+longitud máxima de 2 puntos porcentuales para todos los candidatos. En este 
+ejercicio calcularás el tamaño de muestra mínimo que cumpla con el objetivo
+usando 3 diseños de muestreo distintos: 1) muestreo aleatorio simple (MAS), 
+2) estratificando con distrito local y 3) estratificando con distrito federal.
+
+Utilizarás simulación y los resultados de las elecciones de gobernador 
+correspondientes al 2012.
+
+```{r}
+# Cargamos la base de datos gto_2012
+gto_2012 <- read.csv("data/gto_2012.csv", stringsAsFactors = FALSE)
+```
+
+En el caso de **MAS**, para cada tamaño de muestra 
+$n=50,100,200,300,400,500,600,700$:
+
+i. Simula una muestra aleatoria de tamaño $n$.
+
+ii. Calcula el estimador de razón (correspondiente a muestreo aleatorio simple) 
+para cada candidato:
+
+$$\hat{p}=\frac{\sum_{i} Y_{i}}{\sum_i X_{i}}$$
+$$\hat{p}=\frac{\sum_h \frac{N_h}{n_h} \sum_i Y_{hi}}{\sum_h \frac{N_h}{n_h} \sum_i X_{hi}}$$
+donde:
+
+* $\hat{p}$ es la estimación de la proporción de votos que recibió el candidato
+en la elección.
+
+* $Y_{i}$ es el número total de votos que recibió el candidato
+en la $i$-ésima casilla.
+
+* $X_{i}$ es el número total de votos en la $i$-ésima casilla. 
+
+iii. Repite los pasos i y ii $1000$ veces para estimar el error estándar para 
+una muestra de tamaño $n$.
+
+#### Muestreo Aleatorio Simple
+```{r}
+# Definimos la semilla
+set.seed(4556788)
+# Definimos el vector n que contiene los tamaños de muestra
+n   <- c(50,100,200,300,400,500,600,700)
+# Juntamos los partidos en una sola variable recordando los principios
+# de los datos limpios
+y_i <- gto_2012 %>% gather(key="partido", value = "votos",
+                           pri_pvem, pan_na, prd, pt, mc, otros) %>% 
+  group_by(partido) %>%  
+  # Agregamos la variable de proporción de votos para cada partido 
+  summarise("prop" = sum(votos)/sum(total))
+
+# Nos quedamos únicamente con las proporciones por partido para 
+# poder realizar el muestreo aleatorio simple
+p_i <- y_i %>%select("prop") %>% unlist()
+
+# Definimos una función para las simulaciones
+sim_p_hat <- function(n, p, n_sims = 1000){
+  # Simulamos de una multinomial con n el tamaño de
+  # muestra y p las proporciones de votos para
+  # partido
+  sim_muestra <- rmultinom(n_sims, n, p)
+  # Obtenemos el estimador de razón para este
+  # tipo de muestreo
+  p_razon     <- sim_muestra/n
+  # Obtenemos el error estándar para cada candidato
+  SE_cand     <- c()
+  for(i in 1:nrow(sim_muestra)){
+    SE_cand <- c(SE_cand, sd(p_razon[i,])/sqrt(n))
+  }
+  return(SE_cand)
+}
+
+# Simulamos los errores estándar dadas las proporciones
+# observadas
+SE <- sim_p_hat(n[1], p_i)
+
+# Juntamos los errores estándar para los distintos tamaños de muestra
+for (j in 2:length(n)) {
+  SE <- cbind(SE, sim_p_hat(n[j], p_i))
+}
+
+# Le damos formato para generar una tabla con los SE
+colnames(SE) <- as.character(n)
+SE <- formatC(SE, digits = 4, format = "f")
+SE
+
+# Le damos formato para generar una tabla con la longitud de los ICs
+IClength <- 1.96*SE
+IClength <- formatC(IClength, digits = 4, format = "f")
+IClength
+```
+
+Para muestro aleatorio simple y dado el estimador de razón para cada candidato $\hat{p}_i$ se tiene que el tamaño de muestra tal que la longitud del intervalo de confianza sea menor a dos puntos porcentuales es al menos 400.
+
+
+Para cada posible **estratificación** (`distrito_fed_17` y `distrito_loc_17`) y 
+tamaño de muestra $n=50,100,200,300,400,500,600,700$:
+
+i. Simula una muestra estratificada de tamaño $n$, donde el tamaño de muestra en 
+cada estrato se asigna proporcional al tamaño del estrato, esto es, sea $N_h$ el 
+número de casillas en el $h$-ésimo estrato, entonces para el estrato $h$ el 
+número de casillas en la muestra será:
+$$n_h = N_h \cdot \frac{n}{\sum_j N_j}$$
+ii. Calcula el estimador de razón combinado (correspondiente a muestreo 
+estratificado) para cada candidato:
+
+$$\hat{p}=\frac{\sum_h \frac{N_h}{n_h} \sum_i Y_{hi}}{\sum_h \frac{N_h}{n_h} \sum_i X_{hi}}$$
+donde:
+
+* $\hat{p}$ es la estimación de la proporción de votos que recibió el candidato
+en la elección.
+
+* $Y_{hi}$ es el número total de votos que recibió el candidato
+en la $i$-ésima casillas, que pertence al $h$-ésimo estrato.
+
+* $X_{hi}$ es el número total de votos en la $i$-ésima casilla, que pertence al 
+$h$-ésimo estrato. 
+
+* $N_h$ es el número total de casillas en el $h$-ésimo estrato.
+
+* $n_h$ es el número de casillas del $h$-ésimo estrato que se seleccionaron en 
+la muestra.
+
+iii. Repite los pasos i y ii $1000$ veces para estimar el error estándar para 
+una muestra de tamaño $n$.
+
+#### Muestreo estratificado
+
+```{r}
+# Nuevamente seguimos los principios de los datos limpios 
+# para definir una única variable con el partido
+# Creamos dos variables "estrato_local" y "estrato_federal"
+# para poder tener un mejor manejo de la base.
+
+base2 <- gto_2012 %>%  gather(key="partido", value = "votos",
+                              pri_pvem, pan_na, prd, pt, mc, otros) %>% 
+  mutate("estrato_local" = distrito_loc_17) %>% 
+  mutate("estrato_federal" = distrito_fed_17)
+
+
+```
+
+##### Muestreo estratificado por distrito local
+
+```{r}
+# Creamos una función que hace un muestreo de las casillas por estrato
+Muestrasim <- function(base,i, nh){
+  Muestra <- base %>% filter(estrato_local==estrato_local[i])
+  sample_n( Muestra, nh[i],replace = TRUE)
+}
+
+```
+
+
+```{r}
+# Creamos una función que calcula el estimador de razon para el estrato local
+# y tamaño de muestra n
+propRazon <- function(n, base){
+  
+  # Se cuentan las casillas por estrato y se dividen entre 
+  # el tamaño de muestra, tomamos el techo, ya que no se pueden
+  # tomar fracciones de las casillas
+  Nh0 <- base %>%  group_by(estrato_local) %>% 
+    summarise(Nh=n()) %>% 
+    mutate("nh" = ceiling(Nh*n/sum(Nh)))
+  
+  nh <- unlist(Nh0$nh)
+  
+  # Muestreamos las casillas que utilizaremos
+  baseMuestra  <- Muestrasim(base,1,nh)
+  
+  # Se repite para todos los estratos
+  for(i in 2:nrow(Nh0)){
+    baseMuestra <- rbind(baseMuestra, Muestrasim(base,i,nh))
+  }
+  
+  # Obtenemos el numerador del estimador de razón
+  Nh <- baseMuestra %>%  group_by(estrato_local) %>% 
+    summarise(Nh=n()) %>% 
+    mutate("nh" = ceiling(Nh*n/sum(Nh)))
+  
+  numerador <- baseMuestra %>% group_by(estrato_local, partido) %>% 
+    summarise(Votos_estrato = sum(votos)) %>% 
+    left_join(Nh,"estrato_local") %>% 
+    group_by(partido) %>% 
+    summarise(numerador = sum(Votos_estrato*Nh/nh))
+  
+  # Obtenemos el denominador del estimador de razón
+  denominador <- baseMuestra %>% group_by(estrato_local) %>% 
+    summarise(votos_Estrato=sum(votos)) %>% 
+    left_join(Nh, "estrato_local") %>% 
+    ungroup() %>% 
+    summarise(denom=sum(votos_Estrato*Nh/nh))
+  # Calculamos el estimador de razón
+  prop <- numerador$numerador/denominador$denom
+  return(prop)
+}
+
+
+```
+
+```{r}
+# Simulamos el error estándar para el estrato local
+Sim_cand_estrato_Loc <- function(i){
+  # Generamos 1000 simulaciones del estimador de razón para el tamaño de muestra i
+  Propsim <- rerun(1000, propRazon(i, base2)) %>% unlist() %>% 
+    matrix(ncol = 1000, byrow = FALSE)
+  
+  # Para cada candidato obtenemos el error estándar en el
+  # estrato local
+  
+  SE_cand     <- c()
+  
+  for(j in 1:nrow(Propsim)){
+    SE_cand <- c(SE_cand, sd(Propsim[j,])/sqrt(i))
+  }
+  return(SE_cand)
+}
+```
+
+```{r}
+# Hacemos las simulaciones para cada estrato
+SE_cand_estrato_Loc <- Sim_cand_estrato_Loc(n[1])
+
+for (j in 2:length(n)) {
+  SE_cand_estrato_Loc  <- cbind(SE_cand_estrato_Loc, Sim_cand_estrato_Loc(n[j]))
+}
+
+# Se le da formato a la tabla de error estándar por estrato local
+colnames(SE_cand_estrato_Loc) <- as.character(n)
+SE_cand_estrato_Loc <- formatC(SE_cand_estrato_Loc, digits = 4, format = "f")
+SE_cand_estrato_Loc
+
+# Se le da formato a la tabla de tamaño del IC por estrato local
+IClength_estrato_Loc <- 1.96*SE_cand_estrato_Loc
+IClength_estrato_Loc <- formatC(IClength_estrato_Loc, digits = 4, format = "f")
+IClength_estrato_Loc
+```
+
+##### Muestreo estratificado por distrito federal
+
+```{r}
+# Creamos un código para muestrear casillas del estrato federal
+MuestrasimFed <- function(base,i, nh){
+  Muestra <- base %>% filter(estrato_federal==estrato_federal[i])
+  sample_n( Muestra, nh[i],replace = TRUE)
+}
+
+```
+
+
+```{r}
+# Creamos una función para calcular el estimador de razón
+# para el estrato federal y tamaño de muestra n
+propRazonFed <- function(n, base){
+  # Se cuentan las casillas por estrato y se dividen entre 
+  # el tamaño de muestra, tomamos el techo, ya que no se pueden
+  # tomar fracciones de las casillas
+  Nh0 <- base %>%  group_by(estrato_federal) %>% 
+    summarise(Nh=n()) %>% 
+    mutate("nh" = ceiling(Nh*n/sum(Nh)))
+  
+  nh <- unlist(Nh0$nh)
+  
+  # Muestreamos las casillas que utilizaremos
+  baseMuestra  <- MuestrasimFed(base,1,nh)
+  
+  # Se repite para todos los estratos
+  for(i in 2:nrow(Nh0)){
+    baseMuestra <- rbind(baseMuestra, MuestrasimFed(base,i,nh))
+  }
+  
+  # Obtenemos el numerador del estimador de razón
+  Nh <- baseMuestra %>%  group_by(estrato_federal) %>% 
+    summarise(Nh=n()) %>% 
+    mutate("nh" = ceiling(Nh*n/sum(Nh)))
+  
+  numerador <- baseMuestra %>% group_by(estrato_federal, partido) %>% 
+    summarise(Votos_estrato = sum(votos)) %>% 
+    left_join(Nh,"estrato_federal") %>% 
+    group_by(partido) %>% 
+    summarise(numerador = sum(Votos_estrato*Nh/nh))
+  
+  # Obtenemos el denominador para el estimador de razón
+  denominador <- baseMuestra %>% group_by(estrato_federal) %>% 
+    summarise(votos_Estrato=sum(votos)) %>% 
+    left_join(Nh, "estrato_federal") %>% 
+    ungroup() %>% 
+    summarise(denom=sum(votos_Estrato*Nh/nh))
+  
+  # Calculamos el estimador de razón
+  prop <- numerador$numerador/denominador$denom
+  return(prop)
+}
+
+
+```
+
+```{r}
+# Simulamos el error estándar para el estrato federal
+Sim_cand_estrato_Federal <- function(i){
+  # Generamos 1000 simulaciones del estimador de razón para el tamaño de muestra i
+  Propsim <- rerun(1000, propRazonFed(i, base2)) %>% unlist() %>% 
+    matrix(ncol = 1000, byrow = FALSE)
+  
+  SE_cand     <- c()
+  
+  # Para cada candidato obtenemos el error estándar en el
+  # estrato local
+  for(j in 1:nrow(Propsim)){
+    SE_cand <- c(SE_cand, sd(Propsim[j,])/sqrt(i))
+  }
+  return(SE_cand)
+}
+
+```
+
+```{r}
+# Hacemos las simulaciones para cada estrato
+SE_cand_estrato_Fed <- Sim_cand_estrato_Federal(n[1])
+
+for (j in 2:length(n)) {
+  SE_cand_estrato_Fed  <- cbind(SE_cand_estrato_Fed, Sim_cand_estrato_Federal(n[j]))
+}
+# Se le da formato a la tabla de error estándar por estrato federal
+colnames(SE_cand_estrato_Fed) <- as.character(n)
+SE_cand_estrato_Fed <- formatC(SE_cand_estrato_Fed, digits = 4, format = "f")
+SE_cand_estrato_Fed
+# Se le da formato a la tabla de longitud del IC por estrato federal
+IClength_estrato_Fed <- 1.96*SE_cand_estrato_Fed
+IClength_estrato_Fed <- formatC(IClength_estrato_Fed, digits = 4, format = "f")
+IClength_estrato_Fed
+```
+
+
+Ahora:
+
+1. Reporta en una tabla el error estándar para cada candidato, tamaño de muestra
+y diseño (MAS/estratificaciones).
+
+```{r}
+# Juntamos las distintas tablas en una tabla con toda la información
+tablaTodos <- data.frame(rbind(cbind("Diseño"=rep("MAS",6), "Candidato"=cbind(y_i$partido), SE),
+                               cbind("Diseño"=rep("Local",6), "Candidato"=cbind(y_i$partido), SE_cand_estrato_Loc),
+                               cbind("Diseño"=rep("Federal",6), "Candidato"=cbind(y_i$partido), SE_cand_estrato_Fed)), stringsAsFactors = FALSE)
+names(tablaTodos) <- c("Diseño", "Candidato", paste0("TamMuestra_", n))
+tablaTodos
+```
+
+
+2. Grafica los datos de la tabla: realiza una gráfica de paneles (con 
+`facet_wrap()`), cada partido en un panel, en el eje horizontal grafica el 
+tamaño de muestra y en el eje vertical el error estándar, tendrás en una misma 
+gráfica tres curvas, una para muestreo aleatorio simple y una para 
+cada estratificación.
+
+```{r}
+# Graficamos el error estándar por partido, muestreo y tamaño de muestra
+
+tablaTodos[,3:ncol(tablaTodos)]<- matrix(unlist(lapply(3:ncol(tablaTodos), function(i){as.numeric(tablaTodos[,i])})), 
+                                         nrow = nrow(tablaTodos), byrow = TRUE)
+
+tablaTodosgraf <- tablaTodos %>% gather("Tamaño", "SE" ,TamMuestra_50:TamMuestra_700) %>% 
+  mutate("Tamaño"=as.numeric(substr(Tamaño, 12,14)))
+
+ggplot(tablaTodosgraf)+theme_bw()+
+  geom_line(aes(Tamaño, SE, col=Diseño))+
+  facet_wrap(~Candidato)
+```
+
+
+3. ¿Qué diseño y tamaño de muestra elegirías? Explica tu respuesta y de 
+ser necesario repite los pasos i-iii para otros valores de $n$.
+
+HAY QUE HACERLO DESPUÉS DE CORRERLO!!!!!

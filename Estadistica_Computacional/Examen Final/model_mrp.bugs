@@ -1,0 +1,43 @@
+
+    model {
+        for (i in 1:n){
+            y[i] ~ dbern(p_bound[i])
+            p_bound[i] <- max(0, p[i])
+            p[i] <- ilogit(b_0 + b_female*female[i] + b_black * black[i] +
+                b_female_black * female[i]*black[i] +
+                a_age[age[i]] + a_edu[edu[i]] + a_age_edu[age[i],edu[i]] +
+                a_state[state[i]])
+    }
+    b_0 ~ dnorm (0, .0001)
+    b_female ~ dnorm (0, .0001)
+    b_black ~ dnorm (0, .0001)
+    b_female_black ~ dnorm (0, .0001)
+    for (j in 1:n_age) {
+        a_age[j] ~ dnorm(0, tau_age)}
+    for (j in 1:n_edu) {
+        a_edu[j] ~ dnorm(0, tau_edu)}
+    for (j in 1:n_age) {
+        for (k in 1:n_edu){
+            a_age_edu[j,k] ~ dnorm(0, tau_age_edu)
+        }
+    }
+    for (j in 1:n_state) {
+        a_state[j] ~ dnorm(a_state_hat[j], tau_state)
+        a_state_hat[j] <- a_region[region[j]] + b_v_prev*v_prev[j]
+    }
+    b_v_prev ~ dnorm (0, .0001) 
+    for (j in 1:n_region) {
+        a_region[j] ~ dnorm(0, tau_region)
+    }
+    tau_age <- pow(sigma_age, -2)
+    tau_edu <- pow(sigma_edu, -2)
+    tau_age_edu <- pow(sigma_age_edu, -2)
+    tau_state <- pow(sigma_state, -2)
+    tau_region <- pow(sigma_region, -2)
+    sigma_age ~ dunif (0, 100)
+    sigma_edu ~ dunif (0, 100)
+    sigma_age_edu ~ dunif (0, 100)
+    sigma_state ~ dunif (0, 100)
+    sigma_region ~ dunif (0, 100)
+    }
+    

@@ -1,0 +1,78 @@
+---
+title: "Tarea 1"
+author: "Dalia Camacho"
+date: "August 14, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Explora la base de datos gapminder, estos datos están incluidos en el paquete del mismo nombre, para acceder a ellos basta con cargar el paquete:
+
+Cargar librerías
+```{r}
+library(ggplot2)
+library(gapminder)
+```
+
+
+```{r}
+head(gapminder)
+```
+####Esperanza de vida a lo largo del tiempo
+```{r, fig.width=10, fig.height=5}
+# Obtener deciles de PIB per cápita anuales
+gapminder$gdpPercap_deciles <- 10
+for (i in 1:9) {
+  for (j in seq(1952,2007, by=5)) {
+    q   <- quantile(gapminder$gdpPercap[which(gapminder$year==j)], i*.1)
+    aux <- intersect(which(gapminder$gdpPercap<q),
+                     intersect(which(gapminder$gdpPercap_deciles==10),
+                     which(gapminder$year==j)))
+    gapminder$gdpPercap_deciles[aux] <- i
+  }
+}
+
+# Generar gráfica de Años de vida esperados a través de los años por continente y decil de PIB per cápita
+ggplot(gapminder)+theme_bw()+
+  geom_point(aes(year, lifeExp, color=factor(gdpPercap_deciles), size=pop))+
+  facet_wrap(~continent)+
+  theme(legend.title = element_blank(), legend.position = "bottom")+
+  xlab("Year")+
+  ylab("Life expectancy")
+```
+
+En esta primer gráfica se muestran en el eje x la variable año, en el eje y la variable de esperanza de vida al nacer, se divide en pequeños múltiplos por continente. El color está determinado por el decil de producto interno bruto (PIB) per cápita y el tamaño está definido por la población. En general se muestra una tendencia creciente con mayor variabilidad en Ásia y en África
+
+####Crecimiento de PIB per cápita en Asia
+
+```{r, fig.width=14, fig.height=10}
+Asia <- subset(gapminder, continent=="Asia")
+ggplot(Asia, aes(year, gdpPercap ))+theme_bw()+
+  geom_point(aes(color=factor(gdpPercap_deciles), size=pop))+
+  theme(legend.position = "bottom", legend.title = element_blank())+
+  facet_wrap(~reorder(country,gdpPercap))+
+  xlab("Year")+
+  ylab("Gross domestic product per capita")
+
+```
+
+Esta segunda gráfica muestra las tendencias del PIB per cápita en los distintos países de Asia. Se ordenan los países por la media del PIB en orden creciente. El color está dado por el decil de PIB per cápita a nivel mundial, por lo que se puede ver cómo están ubicados los países de Asia respecto a deciles del PIB per cápita. El tamaño está dado por el tamaño de la población. Se puede observar que en la mayoría de los países de Asia la tendencia del PIB ha sido creciente o constante, salvo en Kuwait, además por los colores se puede ver que los países de Asia se han ido posicionando mejor en cuanto a PIB per cápita a nivel mundial, ya que se pueden observar cambios de decil positivos en varios países.
+
+####Esperanza de vida en África
+
+```{r, fig.width=18, fig.height=10}
+Africa <- subset(gapminder, continent=="Africa")
+ggplot(Africa, aes(year, lifeExp ))+theme_bw()+
+  geom_point(aes(color=factor(gdpPercap_deciles), size=pop))+
+  theme(legend.position = "bottom", legend.title = element_blank())+
+  facet_wrap(~reorder(country,lifeExp))+
+  xlab("Year")+
+  ylab("Life expectancy")
+
+```
+
+Se grafica la esperanza de vida a través de los años, como covariables se encuentran el decil de PIB per cápita (color) y el tamaño de la población (tamaño de los puntos). La esperanza de vida presenta dos tendencias principales, la primera, un aumento en la esperanza de vida y la segunda un aumento en la esperanza de vida seguido de una disminución que puede deberse a distintos factores. El caso esppecífico de Rwanda muestra un salto hacia abajo en la esperanza de vida que puede deberse al genocidio en Rwanda en 1994.
+

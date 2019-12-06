@@ -1,0 +1,222 @@
+---
+title: "Tarea 9"
+author: "Dalia Camacho"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 9 - Inferencia gráfica, tamaño de muestra, bootstrap paramétrico.{-}
+```{r}
+suppressMessages(library(tidyverse))
+library(nullabor)
+library(knitr)
+set.seed(578)
+```
+
+#### Inferencia gráfica {-}
+
+Los datos [marg_diabetes](https://raw.githubusercontent.com/tereom/est-computacional-2018/master/data/marg_diabetes.csv) incluyen información de marginación y diabetes en 
+México: 
+* `ent`, `id_ent`, `mun`, `id_mun`, `cvegeo`: corresponden al estado, municipio 
+y sus códigos de identificación.
+* `n_causa` es el número de muertes de adultos mayores a 65 años a causa de
+diabetes en 2015, y `tasa_mun` la tasa correspondiente por cada 10,000 
+habitantes.
+* `tasa_alf` (porcentaje de población alfabeta), `ind_des_hum` (índice de 
+desarrollo humano), `conapo` (índice de marginación).
+
+Utiliza los datos para explorar gráficamente la relación entre algunas de las
+variables, utiliza el protocolo *lineup* para hacer inferencia gráfica.
+
+```{r}
+suppressMessages(Diabetes <- read_csv("https://raw.githubusercontent.com/tereom/est-computacional-2018/master/data/marg_diabetes.csv"))
+glimpse(Diabetes)
+```
+
+Evaluamos la relación entre la tasa de muertes por diabetes por cada 10,000 habitantes con el índice de desarrollo humano.
+
+```{r}
+permutInd <- lineup(null_permute("tasa_mun"), Diabetes)
+
+ggplot(permutInd, aes(x = ind_des_hum, y = tasa_mun)) +
+  facet_wrap(~ .sample) +
+  geom_jitter(position = position_jitter(width = 0.1, height = 1), 
+              size = 0.8, alpha = 0.5)
+```
+
+El conjunto de los datos verdaderos no es distinguible, por lo que no hay una relación real entre muertes por diabetes e índice de desarrollo humano
+
+
+ahora evaluamos la relación entre el índice de marginación con el índice de desarrollo humano.
+
+```{r}
+permutInd <- lineup(null_permute("conapo"), Diabetes)
+
+ggplot(permutInd, aes(x = ind_des_hum, y = conapo)) +
+  facet_wrap(~ .sample) +
+  geom_jitter(position = position_jitter(width = 0.1, height = 1), 
+              size = 0.8, alpha = 0.5)
+```
+
+En este caso el conjunto 5 es distinguible de los demás conjuntos, por lo que sí existe relación entre índice de marginación e índice de desarrollo humano.
+
+
+#### Simulación para calcular tamaños de muestra {-}
+
+Supongamos que queremos hacer una encuesta para estimar la proporción de 
+hogares donde se consume refresco de manera regular, para ello se diseña un 
+muestreo por conglomerados donde los conglomerados están dados por conjuntos de
+hoagres de tal manera que todos los conglomerados tienen el mismo número de 
+hogares. La selección de la muestra se hará en dos etapas:
+
+1. Seleccionamos $J$ conglomerados de manera aleatoria.
+
+2. En cada conglomerado seleccionames $n/J$ hogares para entrevistar.
+
+El estimador será simplemente el porcentaje de hogares del total 
+de la muestra. Suponemos que la verdadera proporción es cercana a $0.50$ y que 
+la media de la proporción de interés a lo largo de los conglomerados tiene una 
+desviación estándar de $0.1$.
+
+1. Supongamos que la muestra total es de $n=1000$. ¿Cuál es la estimación del 
+error estándar para la proporción estimada si $J=1,10,100,1000$?
+
+```{r}
+# Definimos los parámetros para simular el error estándar 
+nsim <- 1000
+n    <- 1000
+J    <- c(1, 10, 100, 1000)
+mup  <- 0.5
+sdp  <- 0.1
+
+Mean_p <- function(n,j){
+  muestra <- c()
+  for(i in 1:j){
+    p       <- rnorm(1, mup, sdp)
+    muestra <- c(muestra, rbinom(n/j, 1, p))
+  }
+  mean(muestra)
+}
+
+for (j in J) {
+  assign(paste0("SE_", j), rerun(nsim, Mean_p(n,j)) %>% 
+           flatten_dbl() %>% sd())
+}
+
+df <- data.frame((c("J=1"=SE_1,"J=10"=SE_10,"J=100"=SE_100,"J=1000"=SE_1000)))
+names(df) <- "SE"
+kable(df)
+
+```
+
+2. El objetivo es estimar la propoción que consume refresco en la población con 
+un error estándar de a lo más 2%. ¿Que valores de $J$ y $n$ debemos elegir para
+cumplir el objetivo al menor costo?
+Los costos del levantamiento son: 
++ 50 pesos por encuesta.
++ 500 pesos por conglomerado
+
+```{r} 
+npers  <- seq(1000,3950, by=50)
+MatCost <- matrix(nrow = length(npers), ncol = 70)
+MatSE   <- matrix(nrow = length(npers), ncol = 70)
+
+for(i in 1:length(npers)){
+  for(j in 1:70){
+    MatCost[i,j] <- i*50+j*500
+    aux <-rerun(nsim, Mean_p(npers[i],j)) %>% 
+      flatten_dbl() %>% sd()
+    MatSE[i,j]   <- aux
+  }
+}
+
+
+Less_0.02 <- which(MatSE < 0.02)
+Optvars    <- Less_0.02 [which.min(MatCost[Less_0.02 <- which(MatSE < 0.02)])]
+j          <- floor(Optvars/60)
+i          <- Optvars-j*60
+```
+
+El menor costo se obtiene con `r npers[i]` personas y con `r j` conglomerados y el costo es `MatCost[i,j]`.
+
+#### Bootstrap paramétrico {-}
+
+1. Sean $X_1,...,X_n \sim N(\mu, 1)$. Sea $\theta = e^{\mu}$, crea una base de 
+datos usando $\mu=5$ que consista de $n=100$ observaciones.
+
+```{r}
+n     <- 100
+mu    <- 5
+sigma <- 1
+Datos <- rnorm(n,mu, sigma)
+```
+
+
+* Usa el método delta para estimar $\hat{se}$ y crea un intervalo del 95% de
+confianza. Usa boostrap paramétrico para crear un intervalo del 95%. 
+
+```{r}
+# Método delta
+mu_est    <- mean(Datos)
+SE_mu_est <- 1/sqrt(n)
+
+
+g <- function(tau){exp(tau)}
+g_prima <- g
+theta_est <- g(mu_est) 
+SE_est    <- g_prima(mu_est)*SE_mu_est 
+SE_est
+```
+
+```{r}
+IC_low  <- theta_est + SE_est*qnorm(0.025)
+IC_up   <- theta_est + SE_est*qnorm(0.975)
+c(IC_low, IC_up)
+```
+
+
+Usa bootstrap no paramétrico para crear un intervalo del 95%. Compara tus respuestas.
+
+```{r}
+bootEstimates <- function(){
+  Bsample <- rnorm(n, mu_est, SE_mu_est)
+  mu_B    <- mean(Bsample)
+  theta_B <- g(mu_B)
+}
+theta_Boots <- rerun(nsim, bootEstimates()) %>% flatten_dbl()
+
+SE_boot <- sqrt(1/(nsim-1)*sum(theta_Boots-theta_est)^2)
+```
+
+```{r}
+IC_low  <- theta_est + SE_boot*qnorm(0.025)
+IC_up   <- theta_est + SE_boot*qnorm(0.975)
+c(IC_low, IC_up)
+```
+
+Los intervalos obtenidos por el método Delta son más grandes que los obtenidos por bootstrap paramétrico. Pero los intervalos del bootstrap paramétrico no contienen al verdadero valor.
+
+* Realiza un histograma de replicaciones bootstrap para cada método, estas son
+estimaciones de la distribución de $\hat{\theta}$. El método delta también nos
+da una aproximación a esta distribución: $Normal(\hat{\theta},\hat{se}^2)$. 
+Comparalos con la verdadera distribución de $\hat{\theta}$ (que puedes obtener 
+vía simulación). ¿Cuál es la aproximación más cercana a la verdadera 
+distribución?
+
+```{r}
+x <- seq(110, 220)
+y <- dnorm(x, theta_est, SE_est)
+ggplot()+
+  geom_density(aes(theta_Boots, color= "Bootstrap paramétrico"),
+               alpha=0.5, bins=30)+
+  geom_line(aes(x,y, color= "Método Delta"))+
+  geom_vline(aes(xintercept=exp(mu)))
+
+```
+
+En este caso la distribución del bootstrap paramétrico se encuentra alejada de la verdadera distribución.
+
+Pista: $se(\hat{\mu}) = 1/\sqrt{n}$

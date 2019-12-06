@@ -1,0 +1,113 @@
+---
+title: "Tarea 4"
+author: "Dalia Camacho"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+```{r}
+set.seed(5487553)
+suppressMessages(library("tidyverse"))
+```
+
+###Pregunta 1: Urna
+
+10 personas (con nombres distintos) escriben sus nombres y los ponen en una urna, después seleccionan un nombre (al azar).
+
+####A)
+Sea A el evento en el que ninguna persona selecciona su nombre, ¿Cuál es la probabilidad del evento A?
+
+```{r}
+# Se genera una secuencia de números cada uno equivale a un número
+Xnames  <- 1:10
+# Se define el número de simulaciones
+Nsim    <- 10^5
+# Se establece un contador para contar el número de casos en 
+# que ningún individuo elige su nombre
+counter <- 0
+# Se realiza la simulación
+for(i in 1:Nsim){
+  # Se obtiene una muestra sin reemplazo de los nombres
+  x <- sample(Xnames)  
+  # Si ninguno eligió su nombre el contador se aumenta en uno.
+  if(any(x==Xnames)==FALSE){
+    counter <- counter + 1
+  }
+}
+
+P1 <- counter/Nsim
+```
+
+La probabilidad de que ninguno seleccione su nombre es `r P1`.
+
+####B)
+Supongamos que hay 3 personas con el mismo nombre, ¿Cómo calcularías la probabilidad del evento A en este nuevo experimento?
+
+```{r}
+# Se genera una secuencia de números cada uno equivale a un número
+# Suponemos que el nombre "8" se repite tres veces
+Xnames  <- c(1:7, rep(8,3))
+# Se establece un contador para contar el número de casos en 
+# que ningún individuo elige su nombre
+counter2 <- 0
+# Se realiza la simulación
+for(i in 1:Nsim){
+  # Se obtiene una muestra sin reemplazo de los nombres
+  x <- sample(Xnames)  
+  # Si ninguno eligió su nombre el contador se aumenta en uno.
+  if(any(x==Xnames)==FALSE){
+    counter2 <- counter2 + 1
+  }
+}
+
+P2 <- counter2/Nsim
+```
+
+La probabilidad de que ninguno seleccione su nombre es `r P2`.
+
+###Pregunta 2
+Definimos X como la variable aleatoria del número de juegos antes de que termine el experimento de la ruina del jugador, grafica la distribución de probabilidad de  X  (calcula  P(X=1),P(X=2),...,P(X=100)).
+
+```{r}
+DineroI <- 100
+apuesta <- 5
+probWin <- 0.47
+Ns      <- NULL
+for(i in 1:Nsim){
+  N <- 0
+  Dinero  <- DineroI
+  while(Dinero>=apuesta & Dinero < 2*DineroI){
+    res <- rbinom(1, 1, probWin)
+    if(res==1){
+      Dinero <- Dinero + apuesta
+    }else{
+      Dinero <- Dinero - apuesta
+    }
+    N <- N+1
+  }
+  Ns <- c(Ns, N)
+}
+
+probs <- 0
+for(i in 1:100){
+  if(any(Ns==i)){
+    probs <- c(probs, length(which(Ns==i))/Nsim)
+  }else{
+    probs <- c(probs,0)
+  }
+}
+
+df <- as.data.frame(cbind(N=1:100, Probabilidad=probs))
+
+glimpse(df)
+
+ggplot(df)+theme_bw()+
+  geom_point(aes(N, Probabilidad))+
+  ggtitle("Probabilidad del número de juegos para que termine el experimento de la ruina del jugador")+
+  xlab("Número de juegos")
+
+```
